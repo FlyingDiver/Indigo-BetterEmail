@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<Events>
+    <Event id="emailAvailable">
+        <Name>New Mail Available</Name>
+		<ConfigUI>
+			<Field id="textSender" type="textfield">
+				<Label>Text in Sender:</Label>
+			</Field>
+			<Field id="textSubject" type="textfield">
+				<Label>Text in Subject:</Label>
+			</Field>
+			<Field id="textMessage" type="textfield">
+				<Label>Text in Message:</Label>
+			</Field>
+		</ConfigUI>
+    </Event>
+</Events>

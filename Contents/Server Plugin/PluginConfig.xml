@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<PluginConfig>
+	<Field id="pollingFrequency" type="textfield" defaultValue="5">
+		<Label>Poll Email Servers Every (minutes):</Label>
+	</Field>
+	<Field id="showDebugInfo" type="checkbox">
+		<Label>Enable debugging:</Label>
+		<Description>(not recommended)</Description>
+	</Field>
+</PluginConfig>

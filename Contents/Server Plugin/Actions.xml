@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<Actions>
+	<Action id="sendEmail">
+		<Name>Send Email</Name>
+		<CallbackMethod>sendEmailAction</CallbackMethod>
+		<ConfigUI>
+			<Field id="smtpDevices" type="menu">
+				<Label>SMTP Server:</Label>
+				<List class="indigo.devices" filter="com.flyingdiver.indigoplugin.betteremail.smtpAccount"/>
+			</Field>
+			<Field id="simpleSeparator1" type="separator"/>
+			<Field id="emailTo" type="textfield">
+				<Label>Email To:</Label>
+			</Field>
+			<Field id="emailCC" type="textfield">
+				<Label>Email CC:</Label>
+			</Field>
+			<Field id="emailBCC" type="textfield">
+				<Label>Email BCC:</Label>
+			</Field>
+			<Field id="simpleSeparator2" type="separator"/>
+			<Field id="emailSubject" type="textfield">
+				<Label>Subject:</Label>
+			</Field>
+			<Field id="subjectNote" type="label">
+				<Label>Variable Substitution is enabled for this field.
+				</Label>
+			</Field>
+			<Field id="simpleSeparator3" type="separator"/>
+			<Field id="emailMessage" type="textfield">
+				<Label>Message:</Label>
+			</Field>
+			<Field id="messageNote" type="label">
+				<Label>Variable Substitution is enabled for this field.
+				</Label>
+			</Field>
+		</ConfigUI>
+	</Action>
+</Actions>

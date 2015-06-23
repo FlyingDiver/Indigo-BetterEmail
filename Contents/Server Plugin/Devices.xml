@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+<Devices>
+	<Device type="custom" id="imapAccount">
+		<Name>IMAP Server</Name>
+		<ConfigUI>
+			<Field id="hostName" type="textfield">
+				<Label>Server Name:</Label>
+			</Field>
+			<Field id="hostPort" type="textfield" defaultValue="143">
+				<Label>Server Port:</Label>
+			</Field>
+			<Field id="useSSL" type="checkbox">
+				<Label>Use SSL</Label>
+				<Description>Check if your mail provider uses SSL.</Description>
+			</Field>
+			<Field id="serverLogin" type="textfield">
+				<Label>Login:</Label>
+			</Field>
+			<Field id="serverPassword" type="textfield" secure="true">
+				<Label>Password:</Label>
+			</Field>
+			<Field id="sep2" type="separator"/>
+			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
+			</Field>
+			<Field id="delete" type="checkbox">
+				<Label>Delete:</Label>
+				<Description>Delete the email message after processing.</Description>
+			</Field>
+		</ConfigUI>
+		<States>
+			<State id="lastMessage">
+				<ValueType>Integer</ValueType>
+				<TriggerLabel>Last Message</TriggerLabel>
+				<ControlPageLabel>Last Message</ControlPageLabel>
+			</State>
+			<State id="messageSubject">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Message Subject</TriggerLabel>
+				<ControlPageLabel>Message Subject</ControlPageLabel>
+			</State>
+			<State id="messageText">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Message Text</TriggerLabel>
+				<ControlPageLabel>Message Text</ControlPageLabel>
+			</State>
+			<State id="serverStatus">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Server Connection Status</TriggerLabel>
+				<ControlPageLabel>Server Status</ControlPageLabel>
+			</State>
+		</States>
+		<UiDisplayStateId>serverStatus</UiDisplayStateId>
+	</Device>
+	<Device type="custom" id="popAccount">
+		<Name>POP Server</Name>
+		<ConfigUI>
+			<Field id="hostName" type="textfield">
+				<Label>Server Name:</Label>
+			</Field>
+			<Field id="hostPort" type="textfield" defaultValue="110">
+				<Label>Server Port:</Label>
+			</Field>
+			<Field id="useSSL" type="checkbox">
+				<Label>Use SSL</Label>
+				<Description>Check if your mail provider uses SSL.</Description>
+			</Field>
+			<Field id="serverLogin" type="textfield">
+				<Label>Login:</Label>
+			</Field>
+			<Field id="serverPassword" type="textfield" secure="true">
+				<Label>Password:</Label>
+			</Field>
+			<Field id="sep2" type="separator"/>
+			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
+			</Field>
+			<Field id="delete" type="checkbox">
+				<Label>Delete:</Label>
+				<Description>Delete the email message after processing.</Description>
+			</Field>
+		</ConfigUI>
+		<States>
+			<State id="lastMessage">
+				<ValueType>Integer</ValueType>
+				<TriggerLabel>Last Message</TriggerLabel>
+				<ControlPageLabel>Last Message</ControlPageLabel>
+			</State>
+			<State id="messageSubject">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Message Subject</TriggerLabel>
+				<ControlPageLabel>Message Subject</ControlPageLabel>
+			</State>
+			<State id="messageText">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Message Text</TriggerLabel>
+				<ControlPageLabel>Message Text</ControlPageLabel>
+			</State>
+			<State id="serverStatus">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Server Connection Status</TriggerLabel>
+				<ControlPageLabel>Server Status</ControlPageLabel>
+			</State>
+		</States>
+		<UiDisplayStateId>serverStatus</UiDisplayStateId>
+	</Device>
+	<Device type="custom" id="smtpAccount">
+		<Name>SMTP Server</Name>
+		<ConfigUI>
+			<Field id="fromAddress" type="textfield">
+				<Label>From Address:</Label>
+			</Field>
+			<Field id="sep2" type="separator"/>
+			<Field id="hostName" type="textfield">
+				<Label>Server Name:</Label>
+			</Field>
+			<Field id="hostPort" type="textfield" defaultValue="25">
+				<Label>Server Port:</Label>
+			</Field>
+			<Field id="useSSL" type="checkbox">
+				<Label>Use SSL</Label>
+				<Description>Check if your mail provider uses SSL.</Description>
+			</Field>
+			<Field id="serverLogin" type="textfield">
+				<Label>Login:</Label>
+			</Field>
+			<Field id="serverPassword" type="textfield" secure="true">
+				<Label>Password:</Label>
+			</Field>
+		</ConfigUI>
+		<States>
+			<State id="messagesToSend">
+				<ValueType>Integer</ValueType>
+				<TriggerLabel>Messages in Queue to Send</TriggerLabel>
+				<ControlPageLabel>Messages to Send</ControlPageLabel>
+			</State>
+			<State id="serverStatus">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Server Connection Status</TriggerLabel>
+				<ControlPageLabel>Server Status</ControlPageLabel>
+			</State>
+		</States>
+		<UiDisplayStateId>serverStatus</UiDisplayStateId>
+	</Device>
+</Devices>
