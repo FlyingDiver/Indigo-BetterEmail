@@ -8,9 +8,7 @@ import indigo
 import smtplib
 import imaplib
 import poplib
-
 from email.Parser import Parser, FeedParser
-from datetime import datetime, time, date
 
 ################################################################################
 class Plugin(indigo.PluginBase):
@@ -19,20 +17,19 @@ class Plugin(indigo.PluginBase):
 	# Email Server Classes and Methods
 	########################################
 
-	# Generic email server class for all methods not specific to IMAP or POP
-	class MailServer(object):
-		def __init__(self, serverDevice):
-			self.device = serverDevice
+	# IMAP specific class and methods
+	class IMAPServer(object):
+				
+		def __init__(self, device):
+			self.device = device
 
 		def __str__(self):
 			return self.status
 
-	# IMAP specific class and methods
-	class IMAPServer(MailServer):
-				
 		def poll(self):
 			props = self.device.pluginProps			
 			indigo.activePlugin.debugLog("Connecting to IMAP Server: " + props["serverName"])
+			
 			try:
 				if props['useSSL']:
 					connection = imaplib.IMAP4_SSL(props['hostName'].encode('ascii','ignore'), int(props['hostPort']))
@@ -41,17 +38,19 @@ class Plugin(indigo.PluginBase):
 				connection.login(props['serverLogin'], props['serverPassword'])
 				connection.select()
 				typ, msg_ids = connection.search(None, 'ALL')
-				for num in msg_ids[0].split():
+				for messageNum in msg_ids[0].split():
+					indigo.activePlugin.debugLog("Retrieving Message # " + messageNum)					
 					try:
-						typ, resp = connection.fetch(num, '(FLAGS)')
+						typ, resp = connection.fetch(messageNum, '(FLAGS)')
 						if "$IndigoProcessed" in resp[0]:
-							indigo.activePlugin.debugLog('Skipping already processed message: ' + str(resp))
+							indigo.activePlugin.debugLog("Message # " + messageNum + " already seen, skipping...")
 							continue
-					except:
-						indigo.activePlugin.debugLog('Error fetching FLAGS for message num ' + str(num))
+					except Exception, e:
+						indigo.activePlugin.debugLog('Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
 						pass
 					try:
-						typ, data = connection.fetch(num, '(RFC822)')
+						indigo.activePlugin.debugLog("Fetching message # " + messageNum)
+						typ, data = connection.fetch(messageNum, '(RFC822)')
 						parser = Parser()
 						message = parser.parsestr(data[0][1])
 						if message.is_multipart():
@@ -68,16 +67,13 @@ class Plugin(indigo.PluginBase):
 					
 						# If configured to do so, delete the message, otherwise mark it as processed
 						if props['delete']:
-							t, resp = connection.store(num, '+FLAGS', r'(\Deleted)')
+							t, resp = connection.store(messageNum, '+FLAGS', r'(\Deleted)')
 							connection.expunge()
 						else:
 							# Mark the message as successfully processed
-							t, resp = connection.store(num, '+FLAGS', r'($IndigoProcessed)')
-							typ, resp = connection.fetch(num, '(FLAGS)')
-							indigo.activePlugin.debugLog('Flags after processing: ' + str(resp))
-					except:
-						indigo.activePlugin.debugLog('Error fetching RFC822 Body for message num ' + str(num))
-						pass
+							t, resp = connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
+					except Exception, e:
+						indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
 					
 				else:
 					indigo.activePlugin.debugLog("No messages to process")
@@ -87,20 +83,25 @@ class Plugin(indigo.PluginBase):
 				connection.logout()
 				indigo.activePlugin.debugLog("Logged out from IMAP server")
 			except Exception, e:
-				indigo.activePlugin.errorLog(u"Unknown error (possibly IMAP server connection error): " + str(e))
+				indigo.activePlugin.errorLog(u"IMAP server connection error: " + str(e))
 				self.device.updateStateOnServer(key="serverStatus", value="Failure")
 	
 		
 	# POP specific class and methods
-	class POPServer(MailServer):
+	class POPServer(object):
 	
-		def poll(self):
-			props = self.device.pluginProps		
-			oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages",indigo.List())
-#			indigo.activePlugin.debugLog("old readMessages: " + str(oldMessageList))
-			newMessageList = indigo.List()
+		def __init__(self, device):
+			self.device = device
 
+		def __str__(self):
+			return self.status
+
+		def poll(self):
+			oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages",indigo.List())
+			newMessageList = indigo.List()
+			props = self.device.pluginProps		
 			indigo.activePlugin.debugLog("Connecting to POP Server: " + props["serverName"])
+
 			try:
 				if props['useSSL']:
 					connection = poplib.POP3_SSL(props['hostName'].encode('ascii','ignore'), int(props['hostPort']))
@@ -108,62 +109,75 @@ class Plugin(indigo.PluginBase):
 					connection = poplib.POP3(props['hostName'].encode('ascii','ignore'), int(props['hostPort']))
 				connection.user(props['serverLogin'])
 				connection.pass_(props['serverPassword'])				
-				
 				(numMessages, totalSize) = connection.stat()				
 				if numMessages == 0:
-					pass
+					indigo.activePlugin.debugLog("No messages to process")
 										
 				for i in range(numMessages):
 					messageNum = i + 1
-					indigo.activePlugin.debugLog("Retrieving Message #" + str(messageNum))					
-					(server_msg, body, octets) = connection.retr(messageNum)
-					uidl = connection.uidl(messageNum).split()[2]
-					newMessageList.append(str(uidl))
-					if uidl in oldMessageList:
-						indigo.activePlugin.debugLog("Message " + uidl + " already seen, skipping...")											
-						continue
+					indigo.activePlugin.debugLog("Retrieving Message # " + str(messageNum))					
+					try:
+						(server_msg, body, octets) = connection.retr(messageNum)
+						uidl = connection.uidl(messageNum).split()[2]
+						newMessageList.append(str(uidl))
+						if uidl in oldMessageList:
+							indigo.activePlugin.debugLog("Message " + uidl + " already seen, skipping...")											
+							continue
 						
-					indigo.activePlugin.debugLog("Parsing message " + uidl)
-					parser = FeedParser()
-					for line in body:
-						parser.feed(str(line + '\n'))
-					message = parser.close()
+						indigo.activePlugin.debugLog("Parsing message " + uidl)
+						parser = FeedParser()
+						for line in body:
+							parser.feed(str(line + '\n'))
+						message = parser.close()
 
-					messageSubject = message.get("Subject")
-					indigo.activePlugin.debugLog("Message Subject: " + messageSubject)
+						messageSubject = message.get("Subject")
+						indigo.activePlugin.debugLog("Message Subject: " + messageSubject)
 
-					if message.is_multipart():
-						messageText = message.get_payload(0).get_payload()
-					else:
-						messageText = message.get_payload()
-					indigo.activePlugin.debugLog("Message Text: " + messageText)
+						if message.is_multipart():
+							messageText = message.get_payload(0).get_payload()
+						else:
+							messageText = message.get_payload()
+						indigo.activePlugin.debugLog("Message Text: " + messageText)
 
-					self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
-					self.device.updateStateOnServer(key="messageText", value=messageText)					
-					self.device.updateStateOnServer(key="lastMessage", value=uidl)
+						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
+						self.device.updateStateOnServer(key="messageText", value=messageText)					
+						self.device.updateStateOnServer(key="lastMessage", value=uidl)
 					
-					# If configured to do so, delete the message, otherwise mark it as processed
-					if props['delete']:
-						connection.dele(messageNum)
-						indigo.activePlugin.debugLog("Deleting Message: " + str(messageNum))
+						# If configured to do so, delete the message, otherwise mark it as processed
+						if props['delete']:
+							connection.dele(messageNum)
+							indigo.activePlugin.debugLog("Deleting Message: " + str(messageNum))
+
+					except Exception, e:
+						indigo.activePlugin.debugLog('Error fetching Message ' + str(messageNum) + ": " + str(e))
+						pass
 					
 				# close the connection and log out
-#				indigo.activePlugin.debugLog("new readMessages: " + str(newMessageList))
 				indigo.activePlugin.pluginPrefs[u"readMessages"] = newMessageList
 				self.device.updateStateOnServer(key="serverStatus", value="Success")
 				connection.quit()
 				indigo.activePlugin.debugLog("Logged out from POP server")
+				
 			except Exception, e:
-				indigo.activePlugin.errorLog(u"Unknown error (possibly POP server connection error): " + str(e))
+				indigo.activePlugin.errorLog(u"POP server connection error: " + str(e))
 				self.device.updateStateOnServer(key="serverStatus", value="Failure")	
 		
 	# SMTP specific class and methods
-	class SMTPServer(MailServer):
+	class SMTPServer(object):
 	
+		def __init__(self, device):
+			self.device = device
+
+		def __str__(self):
+			return self.status
+
 		def poll(self):
-			props = self.device.pluginProps		
-			indigo.activePlugin.debugLog("Sending to SMTP Server: " + props["serverName"])
-			
+#			Nothing to do right now. 
+#			To do:  queue up messages in case of connection failure
+#			
+#			props = self.device.pluginProps		
+#			indigo.activePlugin.debugLog("Sending to SMTP Server: " + props["serverName"])
+			pass			
 
 
 	########################################
@@ -287,7 +301,7 @@ class Plugin(indigo.PluginBase):
  
 	########################################
 	def validateDeviceConfigUi(self, valuesDict, typeId, devId):
-		self.debugLog(u"validateDeviceConfigUi: typeId: %s  devId: %s\n%s" % (typeId, str(devId), str(valuesDict)))
+#		self.debugLog(u"validateDeviceConfigUi: typeId: %s  devId: %s\n%s" % (typeId, str(devId), str(valuesDict)))
 		errorsDict = indigo.Dict()
 		try:
 			pass
@@ -299,7 +313,7 @@ class Plugin(indigo.PluginBase):
 
 	########################################
 	def validateActionConfigUi(self, valuesDict, typeId, devId):
-		self.debugLog(u"validateActionConfigUi: typeId: %s  devId: %s\n%s" % (typeId, str(devId), str(valuesDict)))
+#		self.debugLog(u"validateActionConfigUi: typeId: %s  devId: %s\n%s" % (typeId, str(devId), str(valuesDict)))
 		errorsDict = indigo.Dict()
 		try:
 			pass
@@ -315,17 +329,32 @@ class Plugin(indigo.PluginBase):
 	def sendEmailAction(self, pluginAction):
 		self.debugLog("sendEmailAction called")
 
-#		self.debugLog("pluginAction: " + str(pluginAction))
-		deviceID = pluginAction.props["smtpDevices"]
-		smtpDevice = indigo.devices[int(deviceID)]
-		smtpProps = smtpDevice.globalProps["com.flyingdiver.indigoplugin.betteremail"]
-		self.debugLog("smtpProps: " + str(smtpProps))
+		smtpDevice = indigo.devices[pluginAction.deviceId]
+		smtpProps = smtpDevice.pluginProps
 
-		emailTo = self.substitute(pluginAction.props.get("emailTo", ""))
+#		emailTo = self.substitute(pluginAction.props.get("emailTo", ""))
+		if "emailTo" in pluginAction.props:
+			emailTo =  self.substitute(pluginAction.props["emailTo"])
+		else:
+			self.errorLog(u"No emailTo property in plugin property dict")
+			return
+			
+#		emailSubject = self.substitute(pluginAction.props.get("emailSubject", ""))
+		if "emailSubject" in pluginAction.props:
+			emailSubject =  self.substitute(pluginAction.props["emailSubject"])
+		else:
+			self.errorLog(u"No emailSubject property in plugin property dict")
+			return
+			
+#		emailMessage = self.substitute(pluginAction.props.get("emailMessage", ""))
+		if "emailMessage" in pluginAction.props:
+			emailMessage =  self.substitute(pluginAction.props["emailMessage"])
+		else:
+			self.errorLog(u"No emailMessage property in plugin property dict")
+			return
+
 		emailCC = self.substitute(pluginAction.props.get("emailCC", ""))
 		emailBCC = self.substitute(pluginAction.props.get("emailBCC", ""))
-		emailSubject = self.substitute(pluginAction.props.get("emailSubject", ""))
-		emailMessage = self.substitute(pluginAction.props.get("emailMessage", ""))
 
 		message = ("From: %s\r\nTo: %s\r\n" % (smtpProps["fromAddress"], emailTo))
 		if len(emailCC) > 0:
@@ -340,6 +369,8 @@ class Plugin(indigo.PluginBase):
 		if len(emailBCC) > 0:
 			toAddresses += (", %s" % emailBCC)
 
+#		To do:  implement a queue for messages in case of connection failure
+
 		try:
 			if smtpProps['useSSL']:
 				connection = smtplib.SMTP_SSL(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
@@ -349,11 +380,11 @@ class Plugin(indigo.PluginBase):
 			connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
 			connection.sendmail(smtpProps["fromAddress"], toAddresses, message)
 			connection.quit()
-			self.debugLog("SMTP connection complete")
+			self.debugLog("SMTP connection successful")
 			smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
 
 		except Exception, e:
-			indigo.activePlugin.errorLog(u"Unknown error (possibly SMTP server connection error): " + str(e))
+			indigo.activePlugin.errorLog(u"SMTP server connection error: " + str(e))
 			smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")	
 
 	########################################
