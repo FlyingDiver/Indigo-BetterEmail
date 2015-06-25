@@ -29,7 +29,7 @@ class Plugin(indigo.PluginBase):
 
 		def poll(self):
 			props = self.device.pluginProps			
-			indigo.activePlugin.debugLog("Connecting to IMAP Server: " + props["serverName"])
+			indigo.activePlugin.debugLog("Connecting to IMAP Server: " + self.device.name)
 			
 			try:
 				if props['useSSL']:
@@ -98,10 +98,10 @@ class Plugin(indigo.PluginBase):
 			return self.status
 
 		def poll(self):
+			indigo.activePlugin.debugLog("Connecting to POP Server: " + self.device.name)
+			props = self.device.pluginProps		
 			oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages",indigo.List())
 			newMessageList = indigo.List()
-			props = self.device.pluginProps		
-			indigo.activePlugin.debugLog("Connecting to POP Server: " + props["serverName"])
 
 			try:
 				if props['useSSL']:
@@ -175,6 +175,7 @@ class Plugin(indigo.PluginBase):
 
 		def smtpSend(self, pluginAction):
 			indigo.activePlugin.debugLog("smtpSend called for message '" + pluginAction.props["emailSubject"] + "'")
+			indigo.activePlugin.debugLog("Connecting to SMTP Server: " + self.device.name)
 	
 			smtpDevice = indigo.devices[pluginAction.deviceId]
 			smtpProps = smtpDevice.pluginProps
