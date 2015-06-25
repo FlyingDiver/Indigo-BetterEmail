@@ -14,4 +14,20 @@
 		<Name>Check for new Email</Name>
         <CallbackMethod>pollServers</CallbackMethod>
 	</MenuItem>
+	<MenuItem id="menu2">
+		<Name>Clear All Email Queues</Name>
+        <CallbackMethod>clearAllSMTPQueues</CallbackMethod>
+	</MenuItem>
+
+	<MenuItem id="menu3">
+   		<Name>Clear Email Queue (Select Device)</Name>
+      	<CallbackMethod>clearSMTPQueueMenu</CallbackMethod>
+      	<ButtonTitle>Clear Queue</ButtonTitle>
+      	<ConfigUI>
+        	<Field id="targetDevice" type="menu">
+            	<Label>Select SMTP Queue to clear:</Label>
+            	<List class="self" filter="" method="pickSMTPServer" dynamicReload="true"/>
+         	</Field>
+		</ConfigUI>
+	</MenuItem>
 </MenuItems>

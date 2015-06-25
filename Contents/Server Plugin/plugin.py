@@ -9,6 +9,7 @@ import smtplib
 import imaplib
 import poplib
 from email.Parser import Parser, FeedParser
+from Queue import Queue
 
 ################################################################################
 class Plugin(indigo.PluginBase):
@@ -167,19 +168,82 @@ class Plugin(indigo.PluginBase):
 	
 		def __init__(self, device):
 			self.device = device
+			self.smtpQ = Queue()
 
 		def __str__(self):
 			return self.status
 
+		def smtpSend(self, pluginAction):
+			indigo.activePlugin.debugLog("smtpSend called for message '" + pluginAction.props["emailSubject"] + "'")
+	
+			smtpDevice = indigo.devices[pluginAction.deviceId]
+			smtpProps = smtpDevice.pluginProps
+
+	#		emailTo = self.substitute(pluginAction.props.get("emailTo", ""))
+			if "emailTo" in pluginAction.props:
+				emailTo =  indigo.activePlugin.substitute(pluginAction.props["emailTo"])
+			else:
+				indigo.activePlugin.errorLog(u"No emailTo property in plugin property dict")
+				return
+			
+	#		emailSubject = self.substitute(pluginAction.props.get("emailSubject", ""))
+			if "emailSubject" in pluginAction.props:
+				emailSubject =  indigo.activePlugin.substitute(pluginAction.props["emailSubject"])
+			else:
+				indigo.activePlugin.errorLog(u"No emailSubject property in plugin property dict")
+				return
+			
+	#		emailMessage = self.substitute(pluginAction.props.get("emailMessage", ""))
+			if "emailMessage" in pluginAction.props:
+				emailMessage =  indigo.activePlugin.substitute(pluginAction.props["emailMessage"])
+			else:
+				indigo.activePlugin.errorLog(u"No emailMessage property in plugin property dict")
+				return
+
+			emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
+			emailBCC = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
+
+			message = ("From: %s\r\nTo: %s\r\n" % (smtpProps["fromAddress"], emailTo))
+			if len(emailCC) > 0:
+				message += ("CC: %s\r\n" % emailCC)
+			message += ("Subject: %s\r\n\r\n" % emailSubject)
+		
+			message += emailMessage
+		
+			toAddresses = emailTo
+			if len(emailCC) > 0:
+				toAddresses += (", %s" % emailCC)
+			if len(emailBCC) > 0:
+				toAddresses += (", %s" % emailBCC)
+
+	#		To do:  implement a queue for messages in case of connection failure
+
+			try:
+				if smtpProps['useSSL']:
+					connection = smtplib.SMTP_SSL(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
+				else:
+					connection = smtplib.SMTP(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
+	
+				connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
+				connection.sendmail(smtpProps["fromAddress"], toAddresses, message)
+				connection.quit()
+				indigo.activePlugin.debugLog("SMTP connection successful")
+				smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+				return True
+
+			except Exception, e:
+				indigo.activePlugin.errorLog(u"SMTP server connection error: " + str(e))
+				smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
+				return False	
+
 		def poll(self):
-#			Nothing to do right now. 
-#			To do:  queue up messages in case of connection failure
-#			
-#			props = self.device.pluginProps		
-#			indigo.activePlugin.debugLog("Sending to SMTP Server: " + props["serverName"])
-			pass			
-
-
+			indigo.activePlugin.debugLog("SMTP poll, " + str(self.smtpQ.qsize()) + " items in queue")
+			while not self.smtpQ.empty():
+				action = self.smtpQ.get(False)
+				if not self.smtpSend(action):
+					self.smtpQ.put(action)		# put back in queue if sending fails
+					return
+					
 	########################################
 	# Main Plugin methods
 	########################################
@@ -228,7 +292,6 @@ class Plugin(indigo.PluginBase):
 	# Verify connectivity to servers and start polling IMAP/POP servers here
 	#
 	def deviceStartComm(self, device):
-#		self.debugLog("deviceStartComm: \n" + str(device))	
 		props = device.pluginProps
 		if len(props) < 3:
 			self.errorLog("Server \"%s\" is misconfigured - disabling" % device.name)
@@ -274,12 +337,6 @@ class Plugin(indigo.PluginBase):
 			pass
 		except:
 			self.errorLog("Error processing trigger %s" % str(trigger.id))
-
-	########################################
-	def pollServers(self):
-		self.debugLog("Polling Email Servers")
-		for serverId, server in self.serverDict.items():
-			server.poll()
 
 
 	########################################
@@ -327,65 +384,28 @@ class Plugin(indigo.PluginBase):
 	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
 	######################
 	def sendEmailAction(self, pluginAction):
-		self.debugLog("sendEmailAction called")
-
+		self.debugLog("sendEmailAction queueing message '" + pluginAction.props["emailSubject"] + "'")
 		smtpDevice = indigo.devices[pluginAction.deviceId]
-		smtpProps = smtpDevice.pluginProps
+		smtpServer = self.serverDict[smtpDevice.id]
+		smtpServer.smtpQ.put(pluginAction)
+		smtpServer.poll()
 
-#		emailTo = self.substitute(pluginAction.props.get("emailTo", ""))
-		if "emailTo" in pluginAction.props:
-			emailTo =  self.substitute(pluginAction.props["emailTo"])
-		else:
-			self.errorLog(u"No emailTo property in plugin property dict")
-			return
-			
-#		emailSubject = self.substitute(pluginAction.props.get("emailSubject", ""))
-		if "emailSubject" in pluginAction.props:
-			emailSubject =  self.substitute(pluginAction.props["emailSubject"])
-		else:
-			self.errorLog(u"No emailSubject property in plugin property dict")
-			return
-			
-#		emailMessage = self.substitute(pluginAction.props.get("emailMessage", ""))
-		if "emailMessage" in pluginAction.props:
-			emailMessage =  self.substitute(pluginAction.props["emailMessage"])
-		else:
-			self.errorLog(u"No emailMessage property in plugin property dict")
-			return
+	########################################
+	def clearAllSMTPQueues(self):
+		self.debugLog("Clearing all SMTP Queues")
+		for serverId, server in self.serverDict.items():
+			if server.device.deviceTypeId == "smtpAccount":
+				server.smtpQ = Queue()			# just nuke the old queue and replace it
 
-		emailCC = self.substitute(pluginAction.props.get("emailCC", ""))
-		emailBCC = self.substitute(pluginAction.props.get("emailBCC", ""))
-
-		message = ("From: %s\r\nTo: %s\r\n" % (smtpProps["fromAddress"], emailTo))
-		if len(emailCC) > 0:
-			message += ("CC: %s\r\n" % emailCC)
-		message += ("Subject: %s\r\n\r\n" % emailSubject)
-		
-		message += emailMessage
-		
-		toAddresses = emailTo
-		if len(emailCC) > 0:
-			toAddresses += (", %s" % emailCC)
-		if len(emailBCC) > 0:
-			toAddresses += (", %s" % emailBCC)
-
-#		To do:  implement a queue for messages in case of connection failure
-
-		try:
-			if smtpProps['useSSL']:
-				connection = smtplib.SMTP_SSL(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
-			else:
-				connection = smtplib.SMTP(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
-	
-			connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
-			connection.sendmail(smtpProps["fromAddress"], toAddresses, message)
-			connection.quit()
-			self.debugLog("SMTP connection successful")
-			smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
-
-		except Exception, e:
-			indigo.activePlugin.errorLog(u"SMTP server connection error: " + str(e))
-			smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")	
+	def clearSMTPQueue(self, device):
+		self.debugLog("Clearing SMTP Queue for " + self.serverDict[device.deviceId].device.name)
+		self.serverDict[device.deviceId].smtpQ = Queue()			# just nuke the old queue and replace it
+   
+	########################################
+	def pollServers(self):
+		self.debugLog("Polling Email Servers")
+		for serverId, server in self.serverDict.items():
+			server.poll()
 
 	########################################
 	# Menu Methods
@@ -399,3 +419,19 @@ class Plugin(indigo.PluginBase):
 			self.pluginPrefs["showDebugInfo"] = True
 		self.debug = not self.debug
 
+	def clearSMTPQueueMenu(self, valuesDict, typeId):		
+		deviceId=int(valuesDict["targetDevice"])
+		for serverId, server in self.serverDict.items():
+			if serverId == deviceId:
+				self.debugLog("Clearing SMTP Queue for " + server.device.name)
+				server.smtpQ = Queue()			# just nuke the old queue and replace it
+		return True         
+         
+	def pickSMTPServer(self, filter=None, valuesDict=None, typeId=0):
+		retList =[]
+		for dev in indigo.devices.iter():
+#			indigo.server.log(dev.pluginId + " " + dev.name + " " + dev.deviceTypeId)  # for debugging
+			if (dev.pluginId.lower().find("betteremail") > -1) and (dev.deviceTypeId == "smtpAccount"): 
+#				indigo.server.log(u" adding "+ dev.name)     # for debugging
+				retList.append((dev.id,dev.name))
+		return retList
