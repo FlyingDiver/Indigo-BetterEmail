@@ -217,8 +217,6 @@ class Plugin(indigo.PluginBase):
 			if len(emailBCC) > 0:
 				toAddresses += (", %s" % emailBCC)
 
-	#		To do:  implement a queue for messages in case of connection failure
-
 			try:
 				if smtpProps['useSSL']:
 					connection = smtplib.SMTP_SSL(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
@@ -271,10 +269,10 @@ class Plugin(indigo.PluginBase):
 		errorMsgDict = indigo.Dict()
 		try:
 			poll = int(valuesDict['pollingFrequency'])
-			if (poll < 1) or (poll > 1440):
+			if (poll < 0) or (poll > 1440):
 				raise
 		except:
-			errorMsgDict['pollingFrequency'] = u"Polling frequency is invalid - enter a valid number (between 1 and 1440)"
+			errorMsgDict['pollingFrequency'] = u"Polling frequency is invalid - enter a valid number (between 0 and 1440)"
 		if len(errorMsgDict) > 0:
 			return (False, valuesDict, errorMsgDict)
 		return (True, valuesDict)
@@ -294,6 +292,9 @@ class Plugin(indigo.PluginBase):
 	#
 	def deviceStartComm(self, device):
 		props = device.pluginProps
+		
+		# need better error checking here
+		
 		if len(props) < 3:
 			self.errorLog("Server \"%s\" is misconfigured - disabling" % device.name)
 			indigo.device.enable(device, value=False)
@@ -317,8 +318,8 @@ class Plugin(indigo.PluginBase):
 	#
 	def deviceStopComm(self, device):
 		if device.id in self.serverDict:
-			del self.serverDict[device.id]
 			self.debugLog("Stopping server: " + device.name)
+			del self.serverDict[device.id]
 		else:
 			self.debugLog("Unknown Device ID: " + device.name)
 			
@@ -349,11 +350,14 @@ class Plugin(indigo.PluginBase):
 	# will log an error and attempt to call runConcurrentThread() again after several seconds.
 	def runConcurrentThread(self):
 		try:
-			loopCount = 0
 			while True:
-				self.pollServers()
-				self.debugLog("Next poll in %s minutes" % (self.pluginPrefs['pollingFrequency'],))
-				self.sleep(int(self.pluginPrefs['pollingFrequency']) * 60)
+				interval = int(self.pluginPrefs['pollingFrequency'])
+				if interval == 0:
+					self.sleep(60)
+				else:
+					self.pollAllServers()
+					self.debugLog("Next poll in %s minutes" % str(interval))
+					self.sleep(interval * 60)
 		except self.StopThread:
 			pass
  
@@ -403,10 +407,14 @@ class Plugin(indigo.PluginBase):
 		self.serverDict[device.deviceId].smtpQ = Queue()			# just nuke the old queue and replace it
    
 	########################################
-	def pollServers(self):
+	def pollAllServers(self):
 		self.debugLog("Polling Email Servers")
 		for serverId, server in self.serverDict.items():
 			server.poll()
+
+	def pollServer(self, device):
+		self.debugLog("Polling Server: " + self.serverDict[device.deviceId].device.name)
+		self.serverDict[device.deviceId].poll()
 
 	########################################
 	# Menu Methods

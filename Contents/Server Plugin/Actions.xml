@@ -26,6 +26,14 @@
 			</Field>
 		</ConfigUI>
 	</Action>
+	<Action id="pollAllServers">
+		<Name>Poll All Servers</Name>
+        <CallbackMethod>pollAllServers</CallbackMethod>
+	</Action>
+	<Action id="pollServer" deviceFilter="self">
+		<Name>Poll A Server</Name>
+        <CallbackMethod>pollServer</CallbackMethod>
+	</Action>
 	<Action id="clearAllSMTPQueues">
 		<Name>Clear All Email Queues</Name>
         <CallbackMethod>clearAllSMTPQueues</CallbackMethod>
