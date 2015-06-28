@@ -6,10 +6,6 @@
 	 back to the user you can post information into the Event Log.
 -->
 <MenuItems>
-	<MenuItem id="menu0">
-		<Name>Toggle Debugging</Name>
-        <CallbackMethod>toggleDebugging</CallbackMethod>
-	</MenuItem>
 	<MenuItem id="menu1">
 		<Name>Check for new Email</Name>
         <CallbackMethod>pollServers</CallbackMethod>
@@ -29,5 +25,15 @@
             	<List class="self" filter="" method="pickSMTPServer" dynamicReload="true"/>
          	</Field>
 		</ConfigUI>
+	</MenuItem>
+	<MenuItem id="titleSeparator1" type="separator" />
+    <MenuItem id="checkForUpdates">
+    	<Name>Check for Plugin Updates...</Name>
+    	<CallbackMethod>checkVersionNow</CallbackMethod>
+    </MenuItem>
+	<MenuItem id="titleSeparator2" type="separator" />
+	<MenuItem id="menu0">
+		<Name>Toggle Debugging</Name>
+        <CallbackMethod>toggleDebugging</CallbackMethod>
 	</MenuItem>
 </MenuItems>

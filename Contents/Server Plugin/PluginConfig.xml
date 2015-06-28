@@ -6,6 +6,14 @@
 	<Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
 		<Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.  Maximum polling interval is 24 hours (1440 minutes).</Label>
 	</Field>
+	<Field id="sep1" type="separator"/>
+	<Field id="updaterEmail" type="textfield">
+		<Label>Email:</Label>
+	</Field>
+	<Field id="updaterEmailsEnabled" type="checkbox" defaultValue="true">
+		<Label>Email Update Notifications:</Label>
+	</Field>
+	<Field id="sep2" type="separator"/>
 	<Field id="showDebugInfo" type="checkbox">
 		<Label>Enable debugging:</Label>
 		<Description>(not recommended)</Description>
