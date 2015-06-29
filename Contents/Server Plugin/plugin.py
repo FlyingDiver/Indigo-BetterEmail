@@ -35,9 +35,9 @@ class Plugin(indigo.PluginBase):
 			
 			try:
 				if props['useSSL']:
-					connection = imaplib.IMAP4_SSL(props['hostName'].encode('ascii','ignore'), int(props['hostPort']))
+					connection = imaplib.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
 				else:
-					connection = imaplib.IMAP4(props['hostName'].encode('ascii','ignore'), int(props['hostPort']))
+					connection = imaplib.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
 				connection.login(props['serverLogin'], props['serverPassword'])
 				connection.select()
 				typ, msg_ids = connection.search(None, 'ALL')
@@ -107,9 +107,9 @@ class Plugin(indigo.PluginBase):
 
 			try:
 				if props['useSSL']:
-					connection = poplib.POP3_SSL(props['hostName'].encode('ascii','ignore'), int(props['hostPort']))
+					connection = poplib.POP3_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
 				else:
-					connection = poplib.POP3(props['hostName'].encode('ascii','ignore'), int(props['hostPort']))
+					connection = poplib.POP3(props['address'].encode('ascii','ignore'), int(props['hostPort']))
 				connection.user(props['serverLogin'])
 				connection.pass_(props['serverPassword'])				
 				(numMessages, totalSize) = connection.stat()				
@@ -218,9 +218,9 @@ class Plugin(indigo.PluginBase):
 
 			try:
 				if smtpProps['useSSL']:
-					connection = smtplib.SMTP_SSL(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
+					connection = smtplib.SMTP_SSL(smtpProps['address'].encode('ascii','ignore'), int(smtpProps['hostPort']))
 				else:
-					connection = smtplib.SMTP(smtpProps['hostName'].encode('ascii','ignore'), int(smtpProps['hostPort']))
+					connection = smtplib.SMTP(smtpProps['address'].encode('ascii','ignore'), int(smtpProps['hostPort']))
 	
 				connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
 				connection.sendmail(smtpProps["fromAddress"], toAddresses, message)
@@ -305,11 +305,7 @@ class Plugin(indigo.PluginBase):
 			self.errorLog(u"Server \"%s\" is misconfigured - disabling" % device.name)
 			indigo.device.enable(device, value=False)
 	
-		else:
-			newProps = device.pluginProps
-			newProps['address'] = device.pluginProps['hostName']
-			device.replacePluginPropsOnServer(newProps)		
-			
+		else:			
 			if device.id not in self.serverDict:
 				self.debugLog(u"Starting server: " + device.name)
 				if device.deviceTypeId == "imapAccount":
@@ -336,23 +332,6 @@ class Plugin(indigo.PluginBase):
 			
 
 	########################################
-	def triggerStartProcessing(self, trigger):
-		self.debugLog(u"Start processing trigger " + str(trigger.id))
-		try:
-			pass
-		except:
-			self.errorLog(u"Error processing trigger %s" % str(trigger.id))
-
-	########################################
-	def triggerStopProcessing(self, trigger):
-		self.debugLog(u"Stop processing trigger " + str(trigger.id))
-		try:
-			pass
-		except:
-			self.errorLog(u"Error processing trigger %s" % str(trigger.id))
-
-
-	########################################
 	# If runConcurrentThread() is defined, then a new thread is automatically created
 	# and runConcurrentThread() is called in that thread after startup() has been called.
 	#
@@ -375,7 +354,6 @@ class Plugin(indigo.PluginBase):
  
 	########################################
 	def validateDeviceConfigUi(self, valuesDict, typeId, devId):
-#		self.debugLog(u"validateDeviceConfigUi: typeId: %s  devId: %s\n%s" % (typeId, str(devId), str(valuesDict)))
 		errorsDict = indigo.Dict()
 		if len(errorsDict) > 0:
 			return (False, valuesDict, errorsDict)
@@ -383,7 +361,6 @@ class Plugin(indigo.PluginBase):
 
 	########################################
 	def validateActionConfigUi(self, valuesDict, typeId, devId):
-#		self.debugLog(u"validateActionConfigUi: typeId: %s  devId: %s\n%s" % (typeId, str(devId), str(valuesDict)))
 		errorsDict = indigo.Dict()
 		try:
 			pass
@@ -418,6 +395,7 @@ class Plugin(indigo.PluginBase):
 	def pollAllServers(self):
 		self.debugLog(u"Polling Email Servers")
 		for serverId, server in self.serverDict.items():
+			self.debugLog(u"serverId: " + str(serverId) + ", serverTypeId: " + server.device.deviceTypeId)
 			server.poll()
 
 	def pollServer(self, device):

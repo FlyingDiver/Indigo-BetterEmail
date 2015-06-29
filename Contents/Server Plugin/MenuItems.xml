@@ -8,7 +8,7 @@
 <MenuItems>
 	<MenuItem id="menu1">
 		<Name>Check for new Email</Name>
-        <CallbackMethod>pollServers</CallbackMethod>
+        <CallbackMethod>pollAllServers</CallbackMethod>
 	</MenuItem>
 	<MenuItem id="menu2">
 		<Name>Clear All Email Queues</Name>

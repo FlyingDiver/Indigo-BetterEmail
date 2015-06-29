@@ -3,7 +3,7 @@
 	<Device type="custom" id="imapAccount">
 		<Name>IMAP Server</Name>
 		<ConfigUI>
-			<Field id="hostName" type="textfield">
+			<Field id="address" type="textfield">
 				<Label>Server Name:</Label>
 			</Field>
 			<Field id="hostPort" type="textfield" defaultValue="143">
@@ -55,7 +55,7 @@
 	<Device type="custom" id="popAccount">
 		<Name>POP Server</Name>
 		<ConfigUI>
-			<Field id="hostName" type="textfield">
+			<Field id="address" type="textfield">
 				<Label>Server Name:</Label>
 			</Field>
 			<Field id="hostPort" type="textfield" defaultValue="110">
@@ -111,7 +111,7 @@
 				<Label>From Address:</Label>
 			</Field>
 			<Field id="sep2" type="separator"/>
-			<Field id="hostName" type="textfield">
+			<Field id="address" type="textfield">
 				<Label>Server Name:</Label>
 			</Field>
 			<Field id="hostPort" type="textfield" defaultValue="25">
