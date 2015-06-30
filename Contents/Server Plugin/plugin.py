@@ -72,6 +72,7 @@ class Plugin(indigo.PluginBase):
 						
 						# If configured to do so, delete the message, otherwise mark it as processed
 						if props['delete']:
+							indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
 							t, resp = connection.store(messageNum, '+FLAGS', r'(\Deleted)')
 							connection.expunge()
 						else:
@@ -152,8 +153,8 @@ class Plugin(indigo.PluginBase):
 
 						# If configured to do so, delete the message, otherwise mark it as processed
 						if props['delete']:
+							indigo.activePlugin.debugLog(u"Deleting Message # " + str(messageNum))
 							connection.dele(messageNum)
-							indigo.activePlugin.debugLog(u"Deleting Message: " + str(messageNum))
 
 					except Exception, e:
 						indigo.activePlugin.debugLog('Error fetching Message ' + str(messageNum) + ": " + str(e))
@@ -301,7 +302,9 @@ class Plugin(indigo.PluginBase):
 			cPattern = re.compile(pattern)
 			match = cPattern.search(device.states[field])
 			if match:
-				self.debugLog("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+				regexMatch = match.group()
+				self.debugLog("\tExecuting Trigger %s (%d), match: %s" % (trigger.name, trigger.id, regexMatch))
+				device.updateStateOnServer(key="regexMatch", value=regexMatch)
 				indigo.trigger.execute(trigger)
 			else:
 				self.debugLog("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))

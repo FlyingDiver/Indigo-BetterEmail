@@ -49,6 +49,11 @@
 				<TriggerLabel>Server Connection Status</TriggerLabel>
 				<ControlPageLabel>Server Status</ControlPageLabel>
 			</State>
+			<State id="regexMatch">
+				<ValueType>String</ValueType>
+				<TriggerLabel>RegEx Match Result</TriggerLabel>
+				<ControlPageLabel>>RegEx Match Result</ControlPageLabel>
+			</State>
 		</States>
 		<UiDisplayStateId>serverStatus</UiDisplayStateId>
 	</Device>
@@ -100,6 +105,11 @@
 				<ValueType>String</ValueType>
 				<TriggerLabel>Server Connection Status</TriggerLabel>
 				<ControlPageLabel>Server Status</ControlPageLabel>
+			</State>
+			<State id="regexMatch">
+				<ValueType>String</ValueType>
+				<TriggerLabel>RegEx Match Result</TriggerLabel>
+				<ControlPageLabel>>RegEx Match Result</ControlPageLabel>
 			</State>
 		</States>
 		<UiDisplayStateId>serverStatus</UiDisplayStateId>
