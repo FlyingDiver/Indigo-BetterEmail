@@ -4,7 +4,7 @@
 # Copyright (c) 2015, Joe Keenan, joe@flyingdiver.com
 
 import indigo
-
+import re
 import smtplib
 import imaplib
 import poplib
@@ -68,6 +68,8 @@ class Plugin(indigo.PluginBase):
 						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
 						self.device.updateStateOnServer(key="lastMessage", value=messageID)
 					
+						indigo.activePlugin.triggerCheck(self.device)
+						
 						# If configured to do so, delete the message, otherwise mark it as processed
 						if props['delete']:
 							t, resp = connection.store(messageNum, '+FLAGS', r'(\Deleted)')
@@ -146,6 +148,8 @@ class Plugin(indigo.PluginBase):
 						self.device.updateStateOnServer(key="messageText", value=messageText)					
 						self.device.updateStateOnServer(key="lastMessage", value=uidl)
 					
+						indigo.activePlugin.triggerCheck(self.device)
+
 						# If configured to do so, delete the message, otherwise mark it as processed
 						if props['delete']:
 							connection.dele(messageNum)
@@ -252,11 +256,11 @@ class Plugin(indigo.PluginBase):
 		self.updater = indigoPluginUpdateChecker.updateChecker(self, "https://dl.dropboxusercontent.com/u/7563539/VersionInfo.html", 1)
 		
 		self.serverDict = dict()		# IMAP/POP servers to poll
+		self.triggers = { }
 
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
 
-	########################################
 	def startup(self):
 		self.debugLog(u"startup called")
 		try: 
@@ -264,10 +268,44 @@ class Plugin(indigo.PluginBase):
 		except:
 			self.errorLog(u"Update checker error.")
 			
-
 	def shutdown(self):
 		self.debugLog(u"shutdown called")
 
+	####################
+
+	def triggerStartProcessing(self, trigger):
+		self.debugLog("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
+		assert trigger.id not in self.triggers
+		self.triggers[trigger.id] = trigger
+ 
+	def triggerStopProcessing(self, trigger):
+		self.debugLog("Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+		assert trigger.id in self.triggers
+		del self.triggers[trigger.id] 
+
+	def triggerCheck(self, device):
+#		self.debugLog("Checking Triggers for Device %s (%d), state: %s" % (device.name, device.id, str(device.states)))
+		self.debugLog("Checking Triggers for Device %s (%d)" % (device.name, device.id))
+	
+		for triggerId, trigger in sorted(self.triggers.iteritems()):
+#			self.debugLog("\tChecking Trigger %s (%d), props: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
+			self.debugLog("\tChecking Trigger %s (%d)" % (trigger.name, trigger.id))
+			
+			# pattern matching here		
+			
+			field = trigger.pluginProps["fieldPopUp"]
+			pattern = trigger.pluginProps["regexPattern"]
+#			self.debugLog("\tChecking Device State %s for Pattern: %s\n%s" % (field, pattern, device.states[field]))
+			self.debugLog("\tChecking Device State %s for Pattern: %s" % (field, pattern))
+	
+			cPattern = re.compile(pattern)
+			match = cPattern.search(device.states[field])
+			if match:
+				self.debugLog("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+				indigo.trigger.execute(trigger)
+			else:
+				self.debugLog("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+			
 	
 	####################
 	def validatePrefsConfigUi(self, valuesDict):

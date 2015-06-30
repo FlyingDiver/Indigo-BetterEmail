@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<Events>
+    <Event id="patternMatch">
+        <Name>Pattern Match in Email</Name>
+		<ConfigUI>
+			<Field type="menu" id="fieldPopUp" defaultValue="messageBody">
+				<Label>Popup Menu:</Label>
+				<List>
+					<Option value="messageText">Message Text</Option>
+					<Option value="messageSubject">Message Subject</Option>
+				</List>
+			</Field>			
+			<Field id="regexPattern" type="textfield">
+				<Label>Regular Expression:</Label>
+			</Field>
+		</ConfigUI>
+    </Event>
+</Events>
