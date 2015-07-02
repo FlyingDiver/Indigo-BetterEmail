@@ -3,6 +3,7 @@
 	<Device type="custom" id="imapAccount">
 		<Name>IMAP Server</Name>
 		<ConfigUI>
+			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
 			<Field id="address" type="textfield">
 				<Label>Server Name:</Label>
 			</Field>
@@ -60,6 +61,7 @@
 	<Device type="custom" id="popAccount">
 		<Name>POP Server</Name>
 		<ConfigUI>
+			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
 			<Field id="address" type="textfield">
 				<Label>Server Name:</Label>
 			</Field>
@@ -117,6 +119,7 @@
 	<Device type="custom" id="smtpAccount">
 		<Name>SMTP Server</Name>
 		<ConfigUI>
+			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
 			<Field id="fromAddress" type="textfield">
 				<Label>From Address:</Label>
 			</Field>

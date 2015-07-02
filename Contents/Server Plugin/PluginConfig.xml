@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <PluginConfig>
+	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
 	<Field id="pollingFrequency" type="textfield" defaultValue="5">
 		<Label>Poll Email Servers Every (minutes):</Label>
 	</Field>

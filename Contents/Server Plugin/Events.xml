@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <Events>
+	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
     <Event id="patternMatch">
         <Name>Pattern Match in Email</Name>
 		<ConfigUI>
