@@ -9,6 +9,7 @@ import smtplib
 import imaplib
 import poplib
 from email.Parser import Parser, FeedParser
+from email.mime.multipart import MIMEMultipart
 from Queue import Queue
 
 import indigoPluginUpdateChecker
@@ -205,21 +206,15 @@ class Plugin(indigo.PluginBase):
 				indigo.activePlugin.errorLog(u"No emailMessage property in plugin property dict")
 				return
 
-			emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
-			emailBCC = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
-
-			message = ("From: %s\r\nTo: %s\r\n" % (smtpProps["fromAddress"], emailTo))
-			if len(emailCC) > 0:
-				message += ("CC: %s\r\n" % emailCC)
-			message += ("Subject: %s\r\n\r\n" % emailSubject)
-		
-			message += emailMessage
-		
-			toAddresses = emailTo
-			if len(emailCC) > 0:
-				toAddresses += (", %s" % emailCC)
-			if len(emailBCC) > 0:
-				toAddresses += (", %s" % emailBCC)
+			msg = MIMEMultipart()
+			msg['Subject'] = emailSubject
+			msg['From'] = smtpProps["fromAddress"]
+			msg['To'] = emailTo
+			msg['Cc'] = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
+			msg['Bcc'] = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
+			msg.set_payload(emailMessage)
+			
+			toAddresses = msg["To"].split(",") + msg["Cc"].split(",") + msg["Bcc"].split(",")
 
 			try:
 				if smtpProps['useSSL']:
@@ -228,7 +223,7 @@ class Plugin(indigo.PluginBase):
 					connection = smtplib.SMTP(smtpProps['address'].encode('ascii','ignore'), int(smtpProps['hostPort']))
 	
 				connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
-				connection.sendmail(smtpProps["fromAddress"], toAddresses, message)
+				connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
 				connection.quit()
 				indigo.activePlugin.debugLog(u"SMTP connection successful")
 				smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
