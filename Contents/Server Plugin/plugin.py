@@ -4,12 +4,18 @@
 # Copyright (c) 2015, Joe Keenan, joe@flyingdiver.com
 
 import indigo
+
 import re
 import smtplib
 import imaplib
 import poplib
+
 from email.Parser import Parser, FeedParser
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email import Charset
+from email.header import Header
+
 from Queue import Queue
 
 import indigoPluginUpdateChecker
@@ -182,8 +188,21 @@ class Plugin(indigo.PluginBase):
 			return self.status
 
 		def smtpSend(self, pluginAction):
-			indigo.activePlugin.debugLog(u"smtpSend called for message '" + pluginAction.props["emailSubject"] + "'")
-			indigo.activePlugin.debugLog(u"Connecting to SMTP Server: " + self.device.name)
+
+			def nonascii(str):
+				return not all(ord(c) < 128 for c in str)   
+
+			def addheader(message, headername, headervalue):
+				if len(headervalue) == 0:
+					return message 
+				if nonascii(headervalue):
+					h = Header(headervalue, 'utf-8')
+					message[headername] = h
+				else:
+					message[headername] = headervalue    
+				return message
+
+			indigo.activePlugin.debugLog(u"Sending to SMTP Server: " + self.device.name)
 	
 			smtpDevice = indigo.devices[pluginAction.deviceId]
 			smtpProps = smtpDevice.pluginProps
@@ -206,15 +225,25 @@ class Plugin(indigo.PluginBase):
 				indigo.activePlugin.errorLog(u"No emailMessage property in plugin property dict")
 				return
 
-			msg = MIMEMultipart()
-			msg['Subject'] = emailSubject
-			msg['From'] = smtpProps["fromAddress"]
-			msg['To'] = emailTo
-			msg['Cc'] = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
-			msg['Bcc'] = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
-			msg.set_payload(emailMessage)
+			emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
+			emailBCC = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
+
+			# Override python's weird assumption that utf-8 text should be encoded with
+			# base64, and instead use quoted-printable. 
+			Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
 			
-			toAddresses = msg["To"].split(",") + msg["Cc"].split(",") + msg["Bcc"].split(",")
+			if (nonascii(emailMessage)):
+				msg = MIMEText(emailMessage,'plain','utf-8') 
+			else:
+				msg = MIMEText(emailMessage,'plain')
+
+			msg = addheader(msg, 'From', smtpProps["fromAddress"])
+			msg = addheader(msg, 'Subject', emailSubject)
+			msg = addheader(msg, 'To', emailTo)
+			msg = addheader(msg, 'Cc', emailCC)
+			msg = addheader(msg, 'Bcc', emailBCC)
+						
+			toAddresses = emailTo.split(",") + emailCC.split(",") + emailBCC.split(",")
 
 			try:
 				if smtpProps['useSSL']:
@@ -225,7 +254,6 @@ class Plugin(indigo.PluginBase):
 				connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
 				connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
 				connection.quit()
-				indigo.activePlugin.debugLog(u"SMTP connection successful")
 				smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
 				return True
 
