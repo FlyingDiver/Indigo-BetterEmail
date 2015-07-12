@@ -277,7 +277,7 @@ class Plugin(indigo.PluginBase):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 		self.debug = pluginPrefs.get(u"showDebugInfo", False)
 	
-		self.updater = indigoPluginUpdateChecker.updateChecker(self, "https://dl.dropboxusercontent.com/u/7563539/VersionInfo.html", 1)
+		self.updater = indigoPluginUpdateChecker.updateChecker(self, "https://dl.dropboxusercontent.com/u/7563539/BEVersionInfo.html", 1)
 		
 		self.serverDict = dict()		# IMAP/POP servers to poll
 		self.triggers = { }
