@@ -9,6 +9,7 @@
 				<List>
 					<Option value="messageText">Message Text</Option>
 					<Option value="messageSubject">Message Subject</Option>
+					<Option value="messageFrom">Message From</Option>
 				</List>
 			</Field>			
 			<Field id="regexPattern" type="textfield">

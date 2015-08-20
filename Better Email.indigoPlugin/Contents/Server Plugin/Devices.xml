@@ -45,6 +45,11 @@
 				<TriggerLabel>Message Text</TriggerLabel>
 				<ControlPageLabel>Message Text</ControlPageLabel>
 			</State>
+			<State id="messageFrom">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Message From</TriggerLabel>
+				<ControlPageLabel>Message From</ControlPageLabel>
+			</State>
 			<State id="serverStatus">
 				<ValueType>String</ValueType>
 				<TriggerLabel>Server Connection Status</TriggerLabel>
@@ -102,6 +107,11 @@
 				<ValueType>String</ValueType>
 				<TriggerLabel>Message Text</TriggerLabel>
 				<ControlPageLabel>Message Text</ControlPageLabel>
+			</State>
+			<State id="messageFrom">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Message From</TriggerLabel>
+				<ControlPageLabel>Message From</ControlPageLabel>
 			</State>
 			<State id="serverStatus">
 				<ValueType>String</ValueType>

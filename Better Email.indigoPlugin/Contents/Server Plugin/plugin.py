@@ -69,10 +69,12 @@ class Plugin(indigo.PluginBase):
 							messageText = message.get_payload()
 						
 						messageSubject = message.get("Subject")
+						messageFrom = message.get("From")
 						messageID = message.get("Message-Id")
 					
 						self.device.updateStateOnServer(key="messageText", value=messageText)
 						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
+						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
 						self.device.updateStateOnServer(key="lastMessage", value=messageID)
 					
 						indigo.activePlugin.triggerCheck(self.device)
@@ -144,6 +146,7 @@ class Plugin(indigo.PluginBase):
 						message = parser.close()
 
 						messageSubject = message.get("Subject")
+						messageFrom = message.get("From")
 						indigo.activePlugin.debugLog(u"Message Subject: " + messageSubject)
 
 						if message.is_multipart():
@@ -154,6 +157,7 @@ class Plugin(indigo.PluginBase):
 
 						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
 						self.device.updateStateOnServer(key="messageText", value=messageText)					
+						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
 						self.device.updateStateOnServer(key="lastMessage", value=uidl)
 					
 						indigo.activePlugin.triggerCheck(self.device)
@@ -308,18 +312,15 @@ class Plugin(indigo.PluginBase):
 		del self.triggers[trigger.id] 
 
 	def triggerCheck(self, device):
-#		self.debugLog("Checking Triggers for Device %s (%d), state: %s" % (device.name, device.id, str(device.states)))
 		self.debugLog("Checking Triggers for Device %s (%d)" % (device.name, device.id))
 	
 		for triggerId, trigger in sorted(self.triggers.iteritems()):
-#			self.debugLog("\tChecking Trigger %s (%d), props: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
 			self.debugLog("\tChecking Trigger %s (%d)" % (trigger.name, trigger.id))
 			
 			# pattern matching here		
 			
 			field = trigger.pluginProps["fieldPopUp"]
 			pattern = trigger.pluginProps["regexPattern"]
-#			self.debugLog("\tChecking Device State %s for Pattern: %s\n%s" % (field, pattern, device.states[field]))
 			self.debugLog("\tChecking Device State %s for Pattern: %s" % (field, pattern))
 	
 			cPattern = re.compile(pattern)
@@ -494,5 +495,5 @@ class Plugin(indigo.PluginBase):
 		retList =[]
 		for dev in indigo.devices.iter():
 			if (dev.pluginId.lower().find("betteremail") > -1) and (dev.deviceTypeId == "smtpAccount"): 
-				retList.append((dev.id,dev.name))
+				retList.append(dev.id,dev.name)
 		return retList
