@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Actions>
 	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
-	<Action id="sendEmail" deviceFilter="self.smtpAccount">
+	<Action id="sendEmail" deviceFilter="self.smtpAccount" uiPath="DeviceActions">
 		<Name>Send Email</Name>
 		<CallbackMethod>sendEmailAction</CallbackMethod>
 		<ConfigUI>
@@ -31,7 +31,7 @@
 		<Name>Poll All Servers</Name>
         <CallbackMethod>pollAllServers</CallbackMethod>
 	</Action>
-	<Action id="pollServer" deviceFilter="self">
+	<Action id="pollServer" deviceFilter="self" uiPath="DeviceActions">
 		<Name>Poll A Server</Name>
         <CallbackMethod>pollServer</CallbackMethod>
 	</Action>
@@ -39,7 +39,7 @@
 		<Name>Clear All Email Queues</Name>
         <CallbackMethod>clearAllSMTPQueues</CallbackMethod>
 	</Action>
-	<Action id="clearSMTPQueue"  deviceFilter="self.smtpAccount">
+	<Action id="clearSMTPQueue"  deviceFilter="self.smtpAccount" uiPath="DeviceActions">
 		<Name>Clear Email Queue</Name>
         <CallbackMethod>clearSMTPQueue</CallbackMethod>
 	</Action>

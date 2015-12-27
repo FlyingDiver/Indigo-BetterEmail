@@ -362,8 +362,24 @@ class Plugin(indigo.PluginBase):
 	# Verify connectivity to servers and start polling IMAP/POP servers here
 	#
 	def deviceStartComm(self, device):
+
+		kCurDevVersCount = 1		# current version of plugin devices
+		
 		props = device.pluginProps
 		
+		instanceVers = int(props.get('devVersCount', 0))
+		if instanceVers >= kCurDevVersCount:
+			continue   # optimization: bail out since dev is already up-to-date
+			
+		elif instanceVers < 1:
+			# make changes to device to get it up to version 1, including calling stateListOrDisplayStateIdChanged if needed.
+			props["devVersCount"] = kCurDevVersCount
+			dev.replacePluginPropsOnServer(props)
+			self.debugLog(u"Updated " + device.name + " to version " + str(kCurDevVersCount)
+			
+		else
+			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)					
+    
 		# need better error checking here
 		
 		if len(props) < 3:
