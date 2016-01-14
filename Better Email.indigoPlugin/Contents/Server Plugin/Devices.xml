@@ -20,6 +20,10 @@
 			<Field id="serverPassword" type="textfield" secure="true">
 				<Label>Password:</Label>
 			</Field>
+			<Field id="useIDLE" type="checkbox">
+				<Label>Use IDLE</Label>
+				<Description>Check if your IMAP server supports IDLE.</Description>
+			</Field>
 			<Field id="sep2" type="separator"/>
 			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>

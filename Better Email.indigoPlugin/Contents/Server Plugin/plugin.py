@@ -18,7 +18,11 @@ from email.header import Header
 
 from Queue import Queue
 
+from threading import *
+
 import indigoPluginUpdateChecker
+#import imaplib2, time
+import imaplib2
 
 ################################################################################
 class Plugin(indigo.PluginBase):
@@ -32,70 +36,117 @@ class Plugin(indigo.PluginBase):
 				
 		def __init__(self, device):
 			self.device = device
+			props = self.device.pluginProps			
+			if props['useIDLE']:
+				if props['useSSL']:
+					self.connection = imaplib2.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+				else:
+					self.connection = imaplib2.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+				self.connection.login(props['serverLogin'], props['serverPassword'])
+				self.connection.select("INBOX")
+				self.checkMsgs()							# on startup, just in case some are waiting
+        		self.thread = Thread(target=self.idle)
+        		self.event = Event()
 
 		def __str__(self):
 			return self.status
 
+		def start(self):
+			self.thread.start()
+ 
+		def stop(self):
+			self.event.set()
+ 
+		def close(self):
+			self.connection.close()
+			self.connection.logout()
+ 
+		def idle(self):
+			while True:
+				if self.event.isSet():
+					return
+				self.needsync = False
+				
+				def callback(args):
+					if not self.event.isSet():
+						self.needsync = True
+						self.event.set()
+						
+				self.connection.idle(callback=callback)
+				self.event.wait()
+				
+				if self.needsync:
+					self.event.clear()
+					indigo.activePlugin.debugLog(self.device.name + u": IDLE Event Received")					
+					self.checkMsgs()
+
+		def checkMsgs(self):
+			props = self.device.pluginProps			
+			typ, msg_ids = self.connection.search(None, 'ALL')
+			for messageNum in msg_ids[0].split():
+				indigo.activePlugin.debugLog(self.device.name + u": Checking Message # " + messageNum)					
+				try:
+					typ, resp = self.connection.fetch(messageNum, '(FLAGS)')
+					if "$IndigoProcessed" in resp[0]:
+						indigo.activePlugin.debugLog(self.device.name + u": Message # " + messageNum + " already seen, skipping...")
+						continue
+				except Exception, e:
+					indigo.activePlugin.debugLog(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
+					pass
+				try:
+					indigo.activePlugin.debugLog(self.device.name + u": Fetching Message # " + messageNum)
+					typ, data = self.connection.fetch(messageNum, '(RFC822)')
+					parser = Parser()
+					message = parser.parsestr(data[0][1])
+					if message.is_multipart():
+						messageText = message.get_payload(0).get_payload()
+					else:
+						messageText = message.get_payload()
+					
+					messageSubject = message.get("Subject")
+					messageFrom = message.get("From")
+					messageID = message.get("Message-Id")
+				
+					self.device.updateStateOnServer(key="messageText", value=messageText)
+					self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
+					self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
+					self.device.updateStateOnServer(key="lastMessage", value=messageID)
+				
+					indigo.activePlugin.triggerCheck(self.device)
+					
+					# If configured to do so, delete the message, otherwise mark it as processed
+					if props['delete']:
+						indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
+						t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
+						self.connection.expunge()
+					else:
+						# Mark the message as successfully processed
+						t, resp = self.connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
+				except Exception, e:
+					indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
+				
 		def poll(self):
 			props = self.device.pluginProps			
+			if props['useIDLE']:		# skip poll when using IDLE
+				indigo.activePlugin.debugLog(u"Skipping IMAP Server using IDLE: " + self.device.name)
+				return
+				
 			indigo.activePlugin.debugLog(u"Connecting to IMAP Server: " + self.device.name)
 			
 			try:
 				if props['useSSL']:
-					connection = imaplib.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+					self.connection = imaplib.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
 				else:
-					connection = imaplib.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
-				connection.login(props['serverLogin'], props['serverPassword'])
-				connection.select()
-				typ, msg_ids = connection.search(None, 'ALL')
-				for messageNum in msg_ids[0].split():
-					indigo.activePlugin.debugLog(u"Retrieving Message # " + messageNum)					
-					try:
-						typ, resp = connection.fetch(messageNum, '(FLAGS)')
-						if "$IndigoProcessed" in resp[0]:
-							indigo.activePlugin.debugLog(u"Message # " + messageNum + " already seen, skipping...")
-							continue
-					except Exception, e:
-						indigo.activePlugin.debugLog('Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
-						pass
-					try:
-						indigo.activePlugin.debugLog(u"Fetching message # " + messageNum)
-						typ, data = connection.fetch(messageNum, '(RFC822)')
-						parser = Parser()
-						message = parser.parsestr(data[0][1])
-						if message.is_multipart():
-							messageText = message.get_payload(0).get_payload()
-						else:
-							messageText = message.get_payload()
-						
-						messageSubject = message.get("Subject")
-						messageFrom = message.get("From")
-						messageID = message.get("Message-Id")
-					
-						self.device.updateStateOnServer(key="messageText", value=messageText)
-						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
-						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
-						self.device.updateStateOnServer(key="lastMessage", value=messageID)
-					
-						indigo.activePlugin.triggerCheck(self.device)
-						
-						# If configured to do so, delete the message, otherwise mark it as processed
-						if props['delete']:
-							indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
-							t, resp = connection.store(messageNum, '+FLAGS', r'(\Deleted)')
-							connection.expunge()
-						else:
-							# Mark the message as successfully processed
-							t, resp = connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
-					except Exception, e:
-						indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
-					
-				else:
-					indigo.activePlugin.debugLog(u"No messages to process")
+					self.connection = imaplib.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+				self.connection.login(props['serverLogin'], props['serverPassword'])
+				self.connection.select("INBOX")
+				
+				self.checkMsgs()
+				
 				# close the connection and log out
 				self.device.updateStateOnServer(key="serverStatus", value="Success")
-				connection.close()
-				connection.logout()
+				self.connection.close()
+				self.connection.logout()
 				indigo.activePlugin.debugLog(u"Logged out from IMAP server")
 			except Exception, e:
 				indigo.activePlugin.errorLog(u"IMAP server connection error: " + str(e))
@@ -362,23 +413,22 @@ class Plugin(indigo.PluginBase):
 	# Verify connectivity to servers and start polling IMAP/POP servers here
 	#
 	def deviceStartComm(self, device):
-
-		kCurDevVersCount = 1		# current version of plugin devices
-		
 		props = device.pluginProps
-		
-		instanceVers = int(props.get('devVersCount', 0))
-		if instanceVers >= kCurDevVersCount:
-			continue   # optimization: bail out since dev is already up-to-date
-			
-		elif instanceVers < 1:
-			# make changes to device to get it up to version 1, including calling stateListOrDisplayStateIdChanged if needed.
-			props["devVersCount"] = kCurDevVersCount
-			dev.replacePluginPropsOnServer(props)
-			self.debugLog(u"Updated " + device.name + " to version " + str(kCurDevVersCount)
-			
-		else
-			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)					
+
+#		kCurDevVersCount = 1		# current version of plugin devices
+#				
+#		instanceVers = int(props.get('devVersCount', 0))
+#		if instanceVers >= kCurDevVersCount:
+#			continue   # optimization: bail out since dev is already up-to-date
+#			
+#		elif instanceVers < 1:
+#			# make changes to device to get it up to version 1, including calling stateListOrDisplayStateIdChanged if needed.
+#			props["devVersCount"] = kCurDevVersCount
+#			dev.replacePluginPropsOnServer(props)
+#			self.debugLog(u"Updated " + device.name + " to version " + str(kCurDevVersCount))
+#
+#		else:
+#			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)					
     
 		# need better error checking here
 		
@@ -390,7 +440,9 @@ class Plugin(indigo.PluginBase):
 			if device.id not in self.serverDict:
 				self.debugLog(u"Starting server: " + device.name)
 				if device.deviceTypeId == "imapAccount":
-					self.serverDict[device.id] = self.IMAPServer(device)
+					self.serverDict[device.id] = self.IMAPServer(device)			
+					if props['useIDLE']:
+						self.serverDict[device.id].start()
 				elif device.deviceTypeId == "popAccount":
 					self.serverDict[device.id] = self.POPServer(device)
 				elif device.deviceTypeId == "smtpAccount":
@@ -405,8 +457,15 @@ class Plugin(indigo.PluginBase):
 	# Terminate communication with servers
 	#
 	def deviceStopComm(self, device):
+		props = device.pluginProps
+
 		if device.id in self.serverDict:
 			self.debugLog(u"Stopping server: " + device.name)
+			if device.deviceTypeId == "imapAccount":
+				self.serverDict[device.id] = self.IMAPServer(device)			
+				if props['useIDLE']:
+					self.serverDict[device.id].stop()
+					self.serverDict[device.id].close()
 			del self.serverDict[device.id]
 		else:
 			self.debugLog(u"Unknown Device ID: " + device.name)
@@ -455,7 +514,7 @@ class Plugin(indigo.PluginBase):
 	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
 	######################
 	def sendEmailAction(self, pluginAction):
-		self.debugLog(u"sendEmailAction queueing message '" + pluginAction.props["emailSubject"] + "'")
+		self.debugLog(u"sendEmailAction queueing message '" + indigo.activePlugin.substitute(pluginAction.props["emailSubject"]) + "'")
 		smtpDevice = indigo.devices[pluginAction.deviceId]
 		smtpServer = self.serverDict[smtpDevice.id]
 		smtpServer.smtpQ.put(pluginAction)
