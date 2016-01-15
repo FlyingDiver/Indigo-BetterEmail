@@ -1,13 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ####################
-# Copyright (c) 2015, Joe Keenan, joe@flyingdiver.com
+# Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
 import indigo
 
 import re
 import smtplib
-import imaplib
 import poplib
 
 from email.Parser import Parser, FeedParser
@@ -18,10 +17,9 @@ from email.header import Header
 
 from Queue import Queue
 
-from threading import *
+from threading import Thread, Event
 
 import indigoPluginUpdateChecker
-#import imaplib2, time
 import imaplib2
 
 ################################################################################
@@ -62,16 +60,17 @@ class Plugin(indigo.PluginBase):
 			self.connection.logout()
  
 		def idle(self):
+
+			def callback(args):
+				if not self.event.isSet():
+					self.needsync = True
+					self.event.set()
+						
 			while True:
 				if self.event.isSet():
 					return
 				self.needsync = False
 				
-				def callback(args):
-					if not self.event.isSet():
-						self.needsync = True
-						self.event.set()
-						
 				self.connection.idle(callback=callback)
 				self.event.wait()
 				
@@ -83,6 +82,7 @@ class Plugin(indigo.PluginBase):
 		def checkMsgs(self):
 			props = self.device.pluginProps			
 			typ, msg_ids = self.connection.search(None, 'ALL')
+			indigo.activePlugin.debugLog(self.device.name + u": msg_ids = " + str(msg_ids))					
 			for messageNum in msg_ids[0].split():
 				indigo.activePlugin.debugLog(self.device.name + u": Checking Message # " + messageNum)					
 				try:
@@ -118,12 +118,12 @@ class Plugin(indigo.PluginBase):
 					if props['delete']:
 						indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
 						t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
-						self.connection.expunge()
 					else:
 						# Mark the message as successfully processed
 						t, resp = self.connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
 				except Exception, e:
 					indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
+			self.connection.expunge()
 				
 		def poll(self):
 			props = self.device.pluginProps			
@@ -135,9 +135,9 @@ class Plugin(indigo.PluginBase):
 			
 			try:
 				if props['useSSL']:
-					self.connection = imaplib.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+					self.connection = imaplib2.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
 				else:
-					self.connection = imaplib.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+					self.connection = imaplib2.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
 				self.connection.login(props['serverLogin'], props['serverPassword'])
 				self.connection.select("INBOX")
 				
