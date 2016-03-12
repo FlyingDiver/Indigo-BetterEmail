@@ -331,7 +331,7 @@ class Plugin(indigo.PluginBase):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 		self.debug = pluginPrefs.get(u"showDebugInfo", False)
 
-		self.updater = GitHubPluginUpdater('FlyingDiver', 'BetterEmail', self)
+		self.updater = GitHubPluginUpdater(self)
 
 		self.serverDict = dict()		# IMAP/POP servers to poll
 		self.triggers = { }
@@ -339,34 +339,15 @@ class Plugin(indigo.PluginBase):
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
 
-	def selfInstall(self):
-		self.updater.install()
-
-	def forceUpdate(self):
-		self.updater.update(currentVersion='0.0.0')
+	def checkForUpdates(self):
+		self.updater.checkForUpdate()
 
 	def updatePlugin(self):
 		self.updater.update()
 
-	def checkForUpdates(self):
-		self.updater.checkForUpdate()
-
-	def checkRateLimit(self):
-		limiter = self.updater.getRateLimit()
-		indigo.server.log('RateLimit {limit:%d remaining:%d resetAt:%d}' % limiter)
-
-	def testUpdateCheck(self):
-		indigo.server.log('-- BEGIN testUpdateCheck --')
-
-		self.updater.checkForUpdate()
-		self.updater.checkForUpdate('0.0.0')
-
-		emptyUpdater = GitHubPluginUpdater('jheddings', 'indigo-ghpu')
-		emptyUpdater.checkForUpdate()
-		emptyUpdater.checkForUpdate('0.0.0')
-		emptyUpdater.checkForUpdate(str(self.pluginVersion))
-
-		indigo.server.log('-- END testUpdateCheck --')
+	def forceUpdate(self):
+		self.updater.update(currentVersion='0.0.0')
+		
 
 	def startup(self):
 		self.debugLog(u"startup called")

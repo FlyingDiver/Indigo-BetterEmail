@@ -20,6 +20,8 @@ import httplib
 import plistlib
 import indigo
 
+import ConfigParser
+
 from urllib2 import urlopen
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -28,14 +30,25 @@ from zipfile import ZipFile
 class GitHubPluginUpdater(object):
 
     #---------------------------------------------------------------------------
-    def __init__(self, owner, repo, plugin=None):
-        self.owner = owner
-        self.repo = repo
+    def __init__(self, plugin=None):
+        config = ConfigParser.RawConfigParser()
+        config.read('ghpu.cfg')
+
+        self.repo = config.get('repository', 'name')
+        self.owner = config.get('repository', 'owner')
+
+        if (config.has_option('repository', 'path')):
+            self.path = config.get('repository', 'path')
+        else:
+            self.path = ''
+
+        # TODO error checking on configuration
+
         self.plugin = plugin
 
     #---------------------------------------------------------------------------
     # install the latest version of the plugin represented by this updater
-    def install(self):
+    def install(self, dryrun=False):
         self._log('Installing plugin from %s/%s...' % (self.owner, self.repo))
         latestRelease = self.getLatestRelease()
 
@@ -44,7 +57,7 @@ class GitHubPluginUpdater(object):
             return False
 
         try:
-            self._installRelease(latestRelease)
+            self._installRelease(latestRelease, dryrun)
         except Exception as e:
             self._error(str(e))
             return False
@@ -53,12 +66,12 @@ class GitHubPluginUpdater(object):
 
     #---------------------------------------------------------------------------
     # updates the contained plugin if needed
-    def update(self, currentVersion=None):
+    def update(self, currentVersion=None, dryrun=False):
         update = self._prepareForUpdate(currentVersion)
         if (update == None): return False
 
         try:
-            self._installRelease(update)
+            self._installRelease(update, dryrun)
         except Exception as e:
             self._error(str(e))
             return False
@@ -176,7 +189,7 @@ class GitHubPluginUpdater(object):
         topdir = zipfile.namelist()[0]
 
         # read and confirm the plugin info contained in the zipfile
-        plistFile = os.path.join(topdir, 'Contents', 'Info.plist')
+        plistFile = os.path.join(topdir, self.path, 'Contents', 'Info.plist')
         self._debug('Searching for plugin info: %s' % plistFile)
 
         plistData = zipfile.read(plistFile)
@@ -186,13 +199,10 @@ class GitHubPluginUpdater(object):
         plist = plistlib.readPlistFromString(plistData)
 
         pluginId = plist.get('CFBundleIdentifier', None)
-        self._debug('Detected pluginId in zipfile: %s' % pluginId)
-
         pluginName = plist.get('CFBundleDisplayName', None)
-        self._debug('Detected pluginName in zipfile: %s' % pluginName)
-
         pluginVersion = plist.get('PluginVersion', None)
-        self._debug('Detected pluginNersion in zipfile: %s' % pluginVersion)
+
+        self._debug('Detected plugin in zipfile: %s' % pluginId)
 
         if (pluginId == None):
             raise Exception('Unable to detect pluginId in download')
@@ -203,51 +213,68 @@ class GitHubPluginUpdater(object):
         elif (self.plugin and (self.plugin.pluginId != pluginId)):
             raise Exception('ID mismatch in download')
 
+        self._debug('Found plugin: %s-%s' % (pluginName, pluginVersion))
+
         return pluginName + '-' + pluginVersion
 
     #---------------------------------------------------------------------------
     # install a given release
-    def _installRelease(self, release):
+    def _installRelease(self, release, dryrun=False):
         tmpdir = tempfile.gettempdir()
         self._debug('Workspace: %s' % tmpdir)
 
+        # the zipfile is held in memory until we verify
         zipfile = self._getZipFileFromRelease(release)
-
         newPluginName = self._verifyPluginInfo(zipfile)
-        self._debug('Found plugin in download: %s' % newPluginName)
 
         # the top level directory should be the first entry in the zipfile
         # it is typically a combination of the owner, repo & release tag
         repotag = zipfile.namelist()[0]
 
-        # this is where the files will end up after extraction
-        destDir = os.path.join(tmpdir, repotag)
-        self._debug('Destination directory: %s' % destDir)
-        if (os.path.exists(destDir)): shutil.rmtree(destDir)
+        # this is where the repo files will end up after extraction
+        repoBaseDir = os.path.join(tmpdir, repotag)
+        self._debug('Destination directory: %s' % repoBaseDir)
+        if (os.path.exists(repoBaseDir)): shutil.rmtree(repoBaseDir)
 
-        # this is where the plugin will reside prior to installation
-        newPluginDir = os.path.join(tmpdir, newPluginName + '.indigoPlugin')
-        self._debug('Plugin directory: %s' % newPluginDir)
-        if (os.path.exists(newPluginDir)): shutil.rmtree(newPluginDir)
+        # this is where the plugin will be after extracting
+        newPluginPath = os.path.join(repoBaseDir, self.path)
+        self._debug('Plugin source path: %s' % newPluginPath)
 
         # at this point, we should have been able to confirm the top-level directory
         # based on reading the pluginId, we know the plugin in the zipfile matches our
         # internal plugin reference (if we have one), temp directories are available
         # and we know the package location for installing the plugin
 
+        self._debug('Extracting files...')
         zipfile.extractall(tmpdir)
 
         # now, make sure we got what we expected
-        if (not os.path.exists(destDir)):
+        if (not os.path.exists(repoBaseDir)):
             raise Exception('Failed to extract plugin')
 
-        # for 'open' to work properly, we need to use the .indigoPlugin package extension
-        os.rename(destDir, newPluginDir)
+        # if the new plugin path does not end in .indigoPlugin, we need to do some
+        # path shuffling for 'open' to work properly
+        if (not newPluginPath.endswith('.indigoPlugin')):
+            stagedPluginPath = os.path.join(tmpdir, newPluginName + '.indigoPlugin')
+            self._debug('Staging plugin: %s' % stagedPluginPath)
+            if (os.path.exists(stagedPluginPath)): shutil.rmtree(stagedPluginPath)
+
+            os.rename(newPluginPath, stagedPluginPath)
+            newPluginPath = stagedPluginPath
+
+        if (dryrun):
+            self._log('Installation terminated (dryrun)')
+            return
 
         self._debug('Installing %s' % newPluginName)
-        subprocess.call(['open', newPluginDir])
+        subprocess.call(['open', indigoPlugin])
+
+        if (os.path.exists(newPluginPath)):
+            self._error('Installation canceled')
+            shutil.rmtree(newPluginPath)
 
         # all clear...  the new plugin has been installed
+        if (os.path.exists(repoBaseDir)): shutil.rmtree(repoBaseDir)
 
     #---------------------------------------------------------------------------
     # return the valid zipfile from the release, or raise an exception

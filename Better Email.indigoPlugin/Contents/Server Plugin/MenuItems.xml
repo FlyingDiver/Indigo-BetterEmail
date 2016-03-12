@@ -27,26 +27,18 @@
 		</ConfigUI>
 	</MenuItem>
 	<MenuItem id="titleSeparator1" type="separator" />
+	<MenuItem id="menu0">
+		<Name>Toggle Debugging</Name>
+        <CallbackMethod>toggleDebugging</CallbackMethod>
+	</MenuItem>
+	<MenuItem id="titleSeparator2" type="separator" />
     <MenuItem id="checkForUpdates">
     	<Name>Check for Updates</Name>
     	<CallbackMethod>checkForUpdates</CallbackMethod>
     </MenuItem>
     <MenuItem id="updatePlugin">
-        <Name>Update Plugin</Name>
-        <CallbackMethod>updatePlugin</CallbackMethod>
-    </MenuItem>
-	<MenuItem id="titleSeparator2" type="separator" />
-	<MenuItem id="menu0">
-		<Name>Toggle Debugging</Name>
-        <CallbackMethod>toggleDebugging</CallbackMethod>
-	</MenuItem>
-    <MenuItem id="testUpdateCheck">
-        <Name>Test Update Check</Name>
-        <CallbackMethod>testUpdateCheck</CallbackMethod>
-    </MenuItem>
-    <MenuItem id="selfInstall">
-        <Name>Self Install</Name>
-        <CallbackMethod>selfInstall</CallbackMethod>
+    	<Name>Update Plugin</Name>
+    	<CallbackMethod>updatePlugin</CallbackMethod>
     </MenuItem>
     <MenuItem id="forceUpdate">
         <Name>Force Update</Name>
