@@ -8,6 +8,7 @@ import indigo
 import re
 import smtplib
 import poplib
+import imaplib2
 
 from email.Parser import Parser, FeedParser
 from email.mime.multipart import MIMEMultipart
@@ -16,11 +17,9 @@ from email import Charset
 from email.header import Header
 
 from Queue import Queue
-
 from threading import Thread, Event
 
-import indigoPluginUpdateChecker
-import imaplib2
+from ghpu import GitHubPluginUpdater
 
 ################################################################################
 class Plugin(indigo.PluginBase):
@@ -43,8 +42,8 @@ class Plugin(indigo.PluginBase):
 				self.connection.login(props['serverLogin'], props['serverPassword'])
 				self.connection.select("INBOX")
 				self.checkMsgs()							# on startup, just in case some are waiting
-        		self.thread = Thread(target=self.idle)
-        		self.event = Event()
+				self.thread = Thread(target=self.idle)
+				self.event = Event()
 
 		def __str__(self):
 			return self.status
@@ -245,7 +244,7 @@ class Plugin(indigo.PluginBase):
 		def smtpSend(self, pluginAction):
 
 			def nonascii(str):
-				return not all(ord(c) < 128 for c in str)   
+				return not all(ord(c) < 128 for c in str)	
 
 			def addheader(message, headername, headervalue):
 				if len(headervalue) == 0:
@@ -254,7 +253,7 @@ class Plugin(indigo.PluginBase):
 					h = Header(headervalue, 'utf-8')
 					message[headername] = h
 				else:
-					message[headername] = headervalue    
+					message[headername] = headervalue	 
 				return message
 
 			indigo.activePlugin.debugLog(u"Sending to SMTP Server: " + self.device.name)
@@ -269,13 +268,13 @@ class Plugin(indigo.PluginBase):
 				return
 			
 			if "emailSubject" in pluginAction.props:
-				emailSubject =  indigo.activePlugin.substitute(pluginAction.props["emailSubject"])
+				emailSubject =	indigo.activePlugin.substitute(pluginAction.props["emailSubject"])
 			else:
 				indigo.activePlugin.errorLog(u"No emailSubject property in plugin property dict")
 				return
 			
 			if "emailMessage" in pluginAction.props:
-				emailMessage =  indigo.activePlugin.substitute(pluginAction.props["emailMessage"])
+				emailMessage =	indigo.activePlugin.substitute(pluginAction.props["emailMessage"])
 			else:
 				indigo.activePlugin.errorLog(u"No emailMessage property in plugin property dict")
 				return
@@ -331,19 +330,48 @@ class Plugin(indigo.PluginBase):
 	def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 		self.debug = pluginPrefs.get(u"showDebugInfo", False)
-	
-		self.updater = indigoPluginUpdateChecker.updateChecker(self, "https://dl.dropboxusercontent.com/u/7563539/BEVersionInfo.html", 1)
-		
+
+		self.updater = GitHubPluginUpdater('FlyingDiver', 'BetterEmail', self)
+
 		self.serverDict = dict()		# IMAP/POP servers to poll
 		self.triggers = { }
 
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
 
+	def selfInstall(self):
+		self.updater.install()
+
+	def forceUpdate(self):
+		self.updater.update(currentVersion='0.0.0')
+
+	def updatePlugin(self):
+		self.updater.update()
+
+	def checkForUpdates(self):
+		self.updater.checkForUpdate()
+
+	def checkRateLimit(self):
+		limiter = self.updater.getRateLimit()
+		indigo.server.log('RateLimit {limit:%d remaining:%d resetAt:%d}' % limiter)
+
+	def testUpdateCheck(self):
+		indigo.server.log('-- BEGIN testUpdateCheck --')
+
+		self.updater.checkForUpdate()
+		self.updater.checkForUpdate('0.0.0')
+
+		emptyUpdater = GitHubPluginUpdater('jheddings', 'indigo-ghpu')
+		emptyUpdater.checkForUpdate()
+		emptyUpdater.checkForUpdate('0.0.0')
+		emptyUpdater.checkForUpdate(str(self.pluginVersion))
+
+		indigo.server.log('-- END testUpdateCheck --')
+
 	def startup(self):
 		self.debugLog(u"startup called")
 		try: 
-			self.updater.checkVersionPoll()
+			self.updater.checkForUpdate()
 		except:
 			self.errorLog(u"Update checker error.")
 			
@@ -429,7 +457,7 @@ class Plugin(indigo.PluginBase):
 #
 #		else:
 #			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)					
-    
+	
 		# need better error checking here
 		
 		if len(props) < 3:
@@ -481,7 +509,7 @@ class Plugin(indigo.PluginBase):
 	def runConcurrentThread(self):
 		try:
 			while True:
-				self.updater.checkVersionPoll()
+				self.updater.checkForUpdate()
 				interval = int(self.pluginPrefs['pollingFrequency'])
 				if interval == 0:
 					self.sleep(60)
@@ -564,8 +592,8 @@ class Plugin(indigo.PluginBase):
 			if serverId == deviceId:
 				self.debugLog(u"Clearing SMTP Queue for " + server.device.name)
 				server.smtpQ = Queue()			# just nuke the old queue and replace it
-		return True         
-         
+		return True			
+		 
 	def pickSMTPServer(self, filter=None, valuesDict=None, typeId=0):
 		retList =[]
 		for dev in indigo.devices.iter():
