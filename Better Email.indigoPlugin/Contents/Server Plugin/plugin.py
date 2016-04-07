@@ -14,7 +14,7 @@ from email.Parser import Parser, FeedParser
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import Charset
-from email.header import Header
+from email.header import Header, decode_header
 
 from Queue import Queue
 from threading import Thread, Event
@@ -97,19 +97,32 @@ class Plugin(indigo.PluginBase):
 					typ, data = self.connection.fetch(messageNum, '(RFC822)')
 					parser = Parser()
 					message = parser.parsestr(data[0][1])
-					if message.is_multipart():
-						messageText = message.get_payload(0).get_payload()
-					else:
-						messageText = message.get_payload()
 					
-					messageSubject = message.get("Subject")
-					messageFrom = message.get("From")
-					messageID = message.get("Message-Id")
-				
-					self.device.updateStateOnServer(key="messageText", value=messageText)
+					bytes, encoding = decode_header(message.get("Subject"))[0]
+					if encoding:
+						messageSubject = bytes.decode(encoding)
+					else:
+						messageSubject = message.get("Subject")
 					self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
+					indigo.activePlugin.debugLog(u"Received Message Subject: " + messageSubject)
+					
+					bytes, encoding = decode_header(message.get("From"))[0]
+					if encoding:
+						messageFrom = bytes.decode(encoding)
+					else:
+						messageFrom = message.get("From")
 					self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
+					indigo.activePlugin.debugLog(u"Received Message From: " + messageFrom)
+
+					messageID = message.get("Message-Id")
 					self.device.updateStateOnServer(key="lastMessage", value=messageID)
+				
+					if message.is_multipart():
+						messageText = message.get_payload(0).get_payload(decode=True).decode(message.get_content_charset())
+					else:
+						messageText = message.get_payload(decode=True).decode(message.get_content_charset())
+					self.device.updateStateOnServer(key="messageText", value=messageText)
+					indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
 				
 					indigo.activePlugin.triggerCheck(self.device)
 					
@@ -195,19 +208,29 @@ class Plugin(indigo.PluginBase):
 							parser.feed(str(line + '\n'))
 						message = parser.close()
 
-						messageSubject = message.get("Subject")
-						messageFrom = message.get("From")
-						indigo.activePlugin.debugLog(u"Message Subject: " + messageSubject)
+						bytes, encoding = decode_header(message.get("Subject"))[0]
+						if encoding:
+							messageSubject = bytes.decode(encoding)
+						else:
+							messageSubject = message.get("Subject")
+						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
+						indigo.activePlugin.debugLog(u"Received Message Subject: " + messageSubject)
+
+						bytes, encoding = decode_header(message.get("From"))[0]
+						if encoding:
+							messageFrom = bytes.decode(encoding)
+						else:
+							messageFrom = message.get("From")
+						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
+						indigo.activePlugin.debugLog(u"Received Message From: " + messageFrom)
 
 						if message.is_multipart():
-							messageText = message.get_payload(0).get_payload()
+							messageText = message.get_payload(0).get_payload(decode=True).decode(message.get_content_charset())
 						else:
-							messageText = message.get_payload()
-						indigo.activePlugin.debugLog(u"Message Text: " + messageText)
-
-						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
+							messageText = message.get_payload(decode=True).decode(message.get_content_charset())
 						self.device.updateStateOnServer(key="messageText", value=messageText)					
-						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
+						indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
+
 						self.device.updateStateOnServer(key="lastMessage", value=uidl)
 					
 						indigo.activePlugin.triggerCheck(self.device)
@@ -563,7 +586,7 @@ class Plugin(indigo.PluginBase):
 			self.debugLog(u"Turning off debug logging")
 			self.pluginPrefs["showDebugInfo"] = False
 		else:
-			iself.debugLog(u"Turning on debug logging")
+			self.debugLog(u"Turning on debug logging")
 			self.pluginPrefs["showDebugInfo"] = True
 		self.debug = not self.debug
 
