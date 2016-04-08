@@ -118,8 +118,7 @@ class Plugin(indigo.PluginBase):
 					self.device.updateStateOnServer(key="lastMessage", value=messageID)
 				
 					if message.is_multipart():
-						first_part = message.get_payload(0)
-						messageText = first_part.get_payload(decode=True).decode(first_part.get_content_charset())
+						messageText = message.get_payload(0).get_payload(decode=True).decode(message.get_content_charset())
 					else:
 						messageText = message.get_payload(decode=True).decode(message.get_content_charset())
 					self.device.updateStateOnServer(key="messageText", value=messageText)
