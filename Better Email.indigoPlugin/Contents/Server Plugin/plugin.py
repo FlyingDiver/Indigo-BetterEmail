@@ -363,15 +363,6 @@ class Plugin(indigo.PluginBase):
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
 
-	def checkForUpdates(self):
-		self.updater.checkForUpdate()
-
-	def updatePlugin(self):
-		self.updater.update()
-
-	def forceUpdate(self):
-		self.updater.update(currentVersion='0.0.0')
-		
 
 	def startup(self):
 		self.debugLog(u"startup called")
@@ -578,10 +569,16 @@ class Plugin(indigo.PluginBase):
 	########################################
 	# Menu Methods
 	########################################
-	def checkVersionNow(self):
-		self.debugLog(u"checkVersionNow() method called.")
-		self.updater.checkVersionNow()
-		
+
+	def checkForUpdates(self):
+		self.updater.checkForUpdate()
+
+	def updatePlugin(self):
+		self.updater.update()
+
+	def forceUpdate(self):
+		self.updater.update(currentVersion='0.0.0')
+			
 	def toggleDebugging(self):
 		if self.debug:
 			self.debugLog(u"Turning off debug logging")
