@@ -15,7 +15,6 @@
 				<List>
 					<Option value="None">None</Option>
 					<Option value="SSL">SSL</Option>
-					<Option value="StartTLS">StartTLS</Option>
 				</List>
 			</Field>
 			<Field id="serverLogin" type="textfield">
@@ -81,9 +80,12 @@
 			<Field id="hostPort" type="textfield" defaultValue="110">
 				<Label>Server Port:</Label>
 			</Field>
-			<Field id="useSSL" type="checkbox">
-				<Label>Use SSL</Label>
-				<Description>Check if your mail provider uses SSL.</Description>
+			<Field type="menu" id="encryptionType" defaultValue="SSL">
+				<Label>Encryption:</Label>
+				<List>
+					<Option value="None">None</Option>
+					<Option value="SSL">SSL</Option>
+				</List>
 			</Field>
 			<Field id="serverLogin" type="textfield">
 				<Label>Login:</Label>

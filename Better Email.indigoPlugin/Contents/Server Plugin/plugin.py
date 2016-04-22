@@ -42,15 +42,14 @@ class Plugin(indigo.PluginBase):
 				self.event = Event()
 				self.thread.start()
 			
+		def __del__(self, device):
+			if self.imapProps['useIDLE']:
+				self.event.set()
+				self.connection.close()
+				self.connection.logout()
+
 		def __str__(self):
 			return self.status
-
-		def stop(self):
-			self.event.set()
- 
-		def close(self):
-			self.connection.close()
-			self.connection.logout()
  
 		def connect(self):
 			try:			
@@ -85,6 +84,7 @@ class Plugin(indigo.PluginBase):
 			
 
 		def idle(self):
+			indigo.activePlugin.debugLog(self.device.name + u": idle() called")					
 
 			def callback(args):
 				if not self.event.isSet():
@@ -180,7 +180,7 @@ class Plugin(indigo.PluginBase):
 				self.device.updateStateOnServer(key="serverStatus", value="Success")
 				self.connection.close()
 				self.connection.logout()
-				indigo.activePlugin.debugLog(u"Logged out from IMAP server")
+				indigo.activePlugin.debugLog(u"Logged out from IMAP server: " + self.device.name)
 			except Exception, e:
 				indigo.activePlugin.errorLog(u"IMAP server connection error: " + str(e))
 				self.device.updateStateOnServer(key="serverStatus", value="Failure")
@@ -202,10 +202,14 @@ class Plugin(indigo.PluginBase):
 			newMessageList = indigo.List()
 
 			try:
-				if props['useSSL']:
+				if self.props['encryptionType'] == 'SSL':
 					connection = poplib.POP3_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
-				else:
+				elif self.props['encryptionType'] == 'None':
 					connection = poplib.POP3(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+				else:
+					indigo.activePlugin.errorLog(u"Unknown encryption type: " + self.imapProps['encryptionType'])
+					return
+					
 				connection.user(props['serverLogin'])
 				connection.pass_(props['serverPassword'])				
 				(numMessages, totalSize) = connection.stat()				
@@ -522,11 +526,6 @@ class Plugin(indigo.PluginBase):
 
 		if device.id in self.serverDict:
 			self.debugLog(u"Stopping server: " + device.name)
-			if device.deviceTypeId == "imapAccount":
-				self.serverDict[device.id] = self.IMAPServer(device)			
-				if props['useIDLE']:
-					self.serverDict[device.id].stop()
-					self.serverDict[device.id].close()
 			del self.serverDict[device.id]
 		else:
 			self.debugLog(u"Unknown Device ID: " + device.name)
