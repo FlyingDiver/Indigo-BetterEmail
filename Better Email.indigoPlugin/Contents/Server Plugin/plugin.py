@@ -6,6 +6,7 @@
 import indigo
 
 import re
+import ssl
 import smtplib
 import poplib
 import imaplib2
@@ -33,24 +34,17 @@ class Plugin(indigo.PluginBase):
 				
 		def __init__(self, device):
 			self.device = device
-			props = self.device.pluginProps			
-			if props['useIDLE']:
-				if props['useSSL']:
-					self.connection = imaplib2.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
-				else:
-					self.connection = imaplib2.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
-				self.connection.login(props['serverLogin'], props['serverPassword'])
-				self.connection.select("INBOX")
+			self.imapProps = self.device.pluginProps			
+			if self.imapProps['useIDLE']:
+				self.connect()
 				self.checkMsgs()							# on startup, just in case some are waiting
 				self.thread = Thread(target=self.idle)
 				self.event = Event()
-
+				self.thread.start()
+			
 		def __str__(self):
 			return self.status
 
-		def start(self):
-			self.thread.start()
- 
 		def stop(self):
 			self.event.set()
  
@@ -58,6 +52,38 @@ class Plugin(indigo.PluginBase):
 			self.connection.close()
 			self.connection.logout()
  
+		def connect(self):
+			try:			
+				if self.imapProps['encryptionType'] == 'SSL':
+					indigo.activePlugin.debugLog(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])					
+					self.connection = imaplib2.IMAP4_SSL(self.imapProps['address'].encode('ascii','ignore'), int(self.imapProps['hostPort']))
+					self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
+					self.connection.select("INBOX")
+			
+				elif self.imapProps['encryptionType'] == 'StartTLS':
+					indigo.activePlugin.debugLog(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])					
+					self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii','ignore'), int(self.imapProps['hostPort']))
+					indigo.activePlugin.debugLog(self.device.name + u": Doing starttls()")					
+					self.connection.starttls()
+					indigo.activePlugin.debugLog(self.device.name + u": Doing login()")					
+					self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
+					indigo.activePlugin.debugLog(self.device.name + u": Doing select(\"INBOX\")")					
+					self.connection.select("INBOX")	
+				
+				elif self.imapProps['encryptionType'] == 'None':
+					indigo.activePlugin.debugLog(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])					
+					self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii','ignore'), int(self.imapProps['hostPort']))
+					self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
+					self.connection.select("INBOX")
+							
+				else:
+					indigo.activePlugin.errorLog(u"Unknown encryption type: " + self.imapProps['encryptionType'])
+
+			except Exception, e:
+				indigo.activePlugin.debugLog(self.device.name + ': Error connecting to IMAP server: ' + str(e))
+				raise
+			
+
 		def idle(self):
 
 			def callback(args):
@@ -77,9 +103,10 @@ class Plugin(indigo.PluginBase):
 					self.event.clear()
 					indigo.activePlugin.debugLog(self.device.name + u": IDLE Event Received")					
 					self.checkMsgs()
+					
 
 		def checkMsgs(self):
-			props = self.device.pluginProps			
+			indigo.activePlugin.debugLog(self.device.name + u": Doing checkMsgs")					
 			typ, msg_ids = self.connection.search(None, 'ALL')
 			indigo.activePlugin.debugLog(self.device.name + u": msg_ids = " + str(msg_ids))					
 			for messageNum in msg_ids[0].split():
@@ -128,7 +155,7 @@ class Plugin(indigo.PluginBase):
 					indigo.activePlugin.triggerCheck(self.device)
 					
 					# If configured to do so, delete the message, otherwise mark it as processed
-					if props['delete']:
+					if self.imapProps['delete']:
 						indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
 						t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
 					else:
@@ -139,21 +166,14 @@ class Plugin(indigo.PluginBase):
 			self.connection.expunge()
 				
 		def poll(self):
-			props = self.device.pluginProps			
-			if props['useIDLE']:		# skip poll when using IDLE
+			if self.imapProps['useIDLE']:		# skip poll when using IDLE
 				indigo.activePlugin.debugLog(u"Skipping IMAP Server using IDLE: " + self.device.name)
 				return
 				
 			indigo.activePlugin.debugLog(u"Connecting to IMAP Server: " + self.device.name)
 			
 			try:
-				if props['useSSL']:
-					self.connection = imaplib2.IMAP4_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
-				else:
-					self.connection = imaplib2.IMAP4(props['address'].encode('ascii','ignore'), int(props['hostPort']))
-				self.connection.login(props['serverLogin'], props['serverPassword'])
-				self.connection.select("INBOX")
-				
+				self.connect()
 				self.checkMsgs()
 				
 				# close the connection and log out
@@ -324,17 +344,39 @@ class Plugin(indigo.PluginBase):
 			toAddresses = emailTo.split(",") + emailCC.split(",") + emailBCC.split(",")
 
 			try:
-				if smtpProps['useSSL']:
+				if smtpProps['encryptionType'] == 'SSL':
 					connection = smtplib.SMTP_SSL(smtpProps['address'].encode('ascii','ignore'), int(smtpProps['hostPort']))
-				else:
-					connection = smtplib.SMTP(smtpProps['address'].encode('ascii','ignore'), int(smtpProps['hostPort']))
-	
-				connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
-				connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
-				connection.quit()
-				smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
-				return True
+					connection.ehlo()
+					connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
+					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
+					connection.quit()
+					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+					return True
 
+				elif smtpProps['encryptionType'] == 'StartTLS':
+					connection = smtplib.SMTP(smtpProps['address'].encode('ascii','ignore'), int(smtpProps['hostPort']))
+					connection.ehlo()
+					connection.starttls()
+					connection.ehlo()
+					connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
+					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
+					connection.quit()
+					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+					return True
+
+				elif smtpProps['encryptionType'] == 'None':
+					connection = smtplib.SMTP(smtpProps['address'].encode('ascii','ignore'), int(smtpProps['hostPort']))
+					connection.ehlo()
+					connection.login(smtpProps["serverLogin"],smtpProps["serverPassword"])
+					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
+					connection.quit()
+					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+					return True
+
+				else:
+					indigo.activePlugin.errorLog(u"Unknown encryption type: " + smtpProps['encryptionType'])
+					return False	
+				
 			except Exception, e:
 				indigo.activePlugin.errorLog(u"SMTP server connection error: " + str(e))
 				smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
@@ -437,26 +479,23 @@ class Plugin(indigo.PluginBase):
 	# Verify connectivity to servers and start polling IMAP/POP servers here
 	#
 	def deviceStartComm(self, device):
-		props = device.pluginProps
 
 #		kCurDevVersCount = 1		# current version of plugin devices
 #				
-#		instanceVers = int(props.get('devVersCount', 0))
+#		instanceVers = int(device.pluginProps.get('devVersCount', 0))
 #		if instanceVers >= kCurDevVersCount:
 #			continue   # optimization: bail out since dev is already up-to-date
 #			
 #		elif instanceVers < 1:
 #			# make changes to device to get it up to version 1, including calling stateListOrDisplayStateIdChanged if needed.
-#			props["devVersCount"] = kCurDevVersCount
-#			dev.replacePluginPropsOnServer(props)
+#			device.pluginProps["devVersCount"] = kCurDevVersCount
+#			dev.replacePluginPropsOnServer(device.pluginProps)
 #			self.debugLog(u"Updated " + device.name + " to version " + str(kCurDevVersCount))
 #
 #		else:
 #			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)					
-	
-		# need better error checking here
-		
-		if len(props) < 3:
+			
+		if len(device.pluginProps) < 3:
 			self.errorLog(u"Server \"%s\" is misconfigured - disabling" % device.name)
 			indigo.device.enable(device, value=False)
 	
@@ -465,8 +504,6 @@ class Plugin(indigo.PluginBase):
 				self.debugLog(u"Starting server: " + device.name)
 				if device.deviceTypeId == "imapAccount":
 					self.serverDict[device.id] = self.IMAPServer(device)			
-					if props['useIDLE']:
-						self.serverDict[device.id].start()
 				elif device.deviceTypeId == "popAccount":
 					self.serverDict[device.id] = self.POPServer(device)
 				elif device.deviceTypeId == "smtpAccount":

@@ -10,9 +10,13 @@
 			<Field id="hostPort" type="textfield" defaultValue="143">
 				<Label>Server Port:</Label>
 			</Field>
-			<Field id="useSSL" type="checkbox">
-				<Label>Use SSL</Label>
-				<Description>Check if your mail provider uses SSL.</Description>
+			<Field type="menu" id="encryptionType" defaultValue="SSL">
+				<Label>Encryption:</Label>
+				<List>
+					<Option value="None">None</Option>
+					<Option value="SSL">SSL</Option>
+					<Option value="StartTLS">StartTLS</Option>
+				</List>
 			</Field>
 			<Field id="serverLogin" type="textfield">
 				<Label>Login:</Label>
@@ -20,7 +24,7 @@
 			<Field id="serverPassword" type="textfield" secure="true">
 				<Label>Password:</Label>
 			</Field>
-			<Field id="useIDLE" type="checkbox">
+			<Field id="useIDLE" type="checkbox" defaultValue="true">
 				<Label>Use IDLE</Label>
 				<Description>Check if your IMAP server supports IDLE.</Description>
 			</Field>
@@ -141,13 +145,17 @@
 			<Field id="address" type="textfield">
 				<Label>Server Name:</Label>
 			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="25">
+			<Field id="hostPort" type="textfield" defaultValue="465">
 				<Label>Server Port:</Label>
 			</Field>
-			<Field id="useSSL" type="checkbox">
-				<Label>Use SSL</Label>
-				<Description>Check if your mail provider uses SSL.</Description>
-			</Field>
+			<Field type="menu" id="encryptionType" defaultValue="SSL">
+				<Label>Encryption:</Label>
+				<List>
+					<Option value="None">None</Option>
+					<Option value="SSL">SSL</Option>
+					<Option value="StartTLS">StartTLS</Option>
+				</List>
+			</Field>			
 			<Field id="serverLogin" type="textfield">
 				<Label>Login:</Label>
 			</Field>
