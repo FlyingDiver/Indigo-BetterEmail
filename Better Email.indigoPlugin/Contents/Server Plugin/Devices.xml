@@ -5,10 +5,7 @@
 		<ConfigUI>
 			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
 			<Field id="address" type="textfield">
-				<Label>Server Name:</Label>
-			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="143">
-				<Label>Server Port:</Label>
+				<Label>IMAP Server Name:</Label>
 			</Field>
 			<Field type="menu" id="encryptionType" defaultValue="SSL">
 				<Label>Encryption:</Label>
@@ -16,6 +13,9 @@
 					<Option value="None">None</Option>
 					<Option value="SSL">SSL</Option>
 				</List>
+			</Field>
+			<Field id="hostPort" type="textfield" defaultValue="993">
+				<Label>Server Port:</Label>
 			</Field>
 			<Field id="serverLogin" type="textfield">
 				<Label>Login:</Label>
@@ -75,10 +75,7 @@
 		<ConfigUI>
 			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
 			<Field id="address" type="textfield">
-				<Label>Server Name:</Label>
-			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="110">
-				<Label>Server Port:</Label>
+				<Label>POP Server Name:</Label>
 			</Field>
 			<Field type="menu" id="encryptionType" defaultValue="SSL">
 				<Label>Encryption:</Label>
@@ -86,6 +83,9 @@
 					<Option value="None">None</Option>
 					<Option value="SSL">SSL</Option>
 				</List>
+			<Field id="hostPort" type="textfield" defaultValue="995">
+				<Label>Server Port:</Label>
+			</Field>
 			</Field>
 			<Field id="serverLogin" type="textfield">
 				<Label>Login:</Label>
@@ -145,10 +145,7 @@
 			</Field>
 			<Field id="sep2" type="separator"/>
 			<Field id="address" type="textfield">
-				<Label>Server Name:</Label>
-			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="465">
-				<Label>Server Port:</Label>
+				<Label>SMTP Server Name:</Label>
 			</Field>
 			<Field type="menu" id="encryptionType" defaultValue="SSL">
 				<Label>Encryption:</Label>
@@ -158,6 +155,9 @@
 					<Option value="StartTLS">StartTLS</Option>
 				</List>
 			</Field>			
+			<Field id="hostPort" type="textfield" defaultValue="465">
+				<Label>Server Port:</Label>
+			</Field>
 			<Field id="serverLogin" type="textfield">
 				<Label>Login:</Label>
 			</Field>
