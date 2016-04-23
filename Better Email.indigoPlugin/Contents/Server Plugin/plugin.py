@@ -22,6 +22,8 @@ from threading import Thread, Event
 
 from ghpu import GitHubPluginUpdater
 
+kCurDevVersCount = 1		# current version of plugin devices
+
 ################################################################################
 class Plugin(indigo.PluginBase):
 
@@ -483,21 +485,36 @@ class Plugin(indigo.PluginBase):
 	# Verify connectivity to servers and start polling IMAP/POP servers here
 	#
 	def deviceStartComm(self, device):
+				
+		instanceVers = int(device.pluginProps.get('devVersCount', 0))
+		self.debugLog(device.name + u": Device Current Version = " + str(instanceVers))
 
-#		kCurDevVersCount = 1		# current version of plugin devices
-#				
-#		instanceVers = int(device.pluginProps.get('devVersCount', 0))
-#		if instanceVers >= kCurDevVersCount:
-#			continue   # optimization: bail out since dev is already up-to-date
-#			
-#		elif instanceVers < 1:
-#			# make changes to device to get it up to version 1, including calling stateListOrDisplayStateIdChanged if needed.
-#			device.pluginProps["devVersCount"] = kCurDevVersCount
-#			dev.replacePluginPropsOnServer(device.pluginProps)
-#			self.debugLog(u"Updated " + device.name + " to version " + str(kCurDevVersCount))
-#
-#		else:
-#			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)					
+		if instanceVers >= kCurDevVersCount:
+			self.debugLog(device.name + u": Device Version is up to date")
+			
+		elif instanceVers < kCurDevVersCount:
+			newProps = device.pluginProps
+
+			encryptionType = device.pluginProps.get('encryptionType', "unknown")
+			if encryptionType == "unknown":
+				useSSL = device.pluginProps.get('useSSL', "false")
+				if useSSL:
+					newProps["encryptionType"] = "SSL"
+				else:
+					newProps["encryptionType"] = "None"
+				self.debugLog(device.name + u": created encryptionType property")
+				
+			if device.deviceTypeId == "imapAccount":
+				useIDLE = device.pluginProps.get('useIDLE', "false")	
+				newProps["useIDLE"] = useIDLE		
+				self.debugLog(device.name + u": created useIDLE property")
+		
+			newProps["devVersCount"] = kCurDevVersCount
+			device.replacePluginPropsOnServer(newProps)
+			self.debugLog(u"Updated " + device.name + " to version " + str(kCurDevVersCount))
+
+		else:
+			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)					
 			
 		if len(device.pluginProps) < 3:
 			self.errorLog(u"Server \"%s\" is misconfigured - disabling" % device.name)
