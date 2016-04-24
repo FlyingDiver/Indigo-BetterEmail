@@ -23,9 +23,18 @@
 			<Field id="serverPassword" type="textfield" secure="true">
 				<Label>Password:</Label>
 			</Field>
-			<Field id="useIDLE" type="checkbox" defaultValue="true">
+			<Field id="useIDLE" type="checkbox" defaultValue="false">
 				<Label>Use IDLE</Label>
 				<Description>Check if your IMAP server supports IDLE.</Description>
+			</Field>
+			<Field id="idleNote" type="label" fontSize="small" fontColor="darkgray">
+				<Label>IMAP servers that support IDLE do not need to be polled. The plugin will maintain a connection to the server and received emails will be processed immediately.</Label>
+			</Field>
+			<Field id="pollingFrequency" type="textfield" defaultValue="15" enabledBindingId="useIDLE" enabledBindingNegate="true" visibleBindingId="useIDLE" visibleBindingValue="false">
+				<Label>Poll IMAP Server Every (minutes):</Label>
+			</Field>
+			<Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray"  visibleBindingId="useIDLE" visibleBindingValue="false">
+				<Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
 			</Field>
 			<Field id="sep2" type="separator"/>
 			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
@@ -92,6 +101,12 @@
 			</Field>
 			<Field id="serverPassword" type="textfield" secure="true">
 				<Label>Password:</Label>
+			</Field>
+			<Field id="pollingFrequency" type="textfield" defaultValue="15">
+				<Label>Poll POP Server Every (minutes):</Label>
+			</Field>
+			<Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray">
+				<Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
 			</Field>
 			<Field id="sep2" type="separator"/>
 			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
@@ -163,6 +178,15 @@
 			</Field>
 			<Field id="serverPassword" type="textfield" secure="true">
 				<Label>Password:</Label>
+			</Field>
+			<Field id="pollingFrequency" type="textfield" defaultValue="15">
+				<Label>Connect to SMTP Server Every (minutes):</Label>
+			</Field>
+			<Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray">
+				<Label>BetterEmail attempts to resend pending email messages if the initial send fails.</Label>
+			</Field>
+			<Field id="pollingFrequencyNote2" type="label" fontSize="small" fontColor="darkgray">
+				<Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
 			</Field>
 		</ConfigUI>
 		<States>

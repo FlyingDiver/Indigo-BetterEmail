@@ -22,7 +22,7 @@ from threading import Thread, Event
 
 from ghpu import GitHubPluginUpdater
 
-kCurDevVersCount = 1		# current version of plugin devices
+kCurDevVersCount = 3		# current version of plugin devices
 
 ################################################################################
 class Plugin(indigo.PluginBase):
@@ -39,10 +39,10 @@ class Plugin(indigo.PluginBase):
 			self.imapProps = self.device.pluginProps			
 			if self.imapProps['useIDLE']:
 				self.connect()
-				self.checkMsgs()							# on startup, just in case some are waiting
 				self.thread = Thread(target=self.idle)
 				self.event = Event()
 				self.thread.start()
+			self.pollCounter = 0			# check on first pass			
 			
 		def __del__(self, device):
 			if self.imapProps['useIDLE']:
@@ -166,13 +166,30 @@ class Plugin(indigo.PluginBase):
 				except Exception, e:
 					indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
 			self.connection.expunge()
+		
 				
+		def pollCheck(self):
+			if self.device.pluginProps['useIDLE']:		# skip poll when using IDLE
+				return False
+			
+			counter = int(self.device.pluginProps['pollingFrequency'])
+			if counter == 0:		# no polling for frequency = 0
+				return False
+				
+			self.pollCounter -= 1
+			if self.pollCounter <= 0:
+				self.pollCounter = counter
+				return True
+			else: 
+				return False
+		
+		
 		def poll(self):
 			if self.imapProps['useIDLE']:		# skip poll when using IDLE
 				indigo.activePlugin.debugLog(u"Skipping IMAP Server using IDLE: " + self.device.name)
 				return
 				
-			indigo.activePlugin.debugLog(u"Connecting to IMAP Server: " + self.device.name)
+			indigo.activePlugin.debugLog(u"Polling IMAP Server: " + self.device.name)
 			
 			try:
 				self.connect()
@@ -193,10 +210,23 @@ class Plugin(indigo.PluginBase):
 	
 		def __init__(self, device):
 			self.device = device
+			self.pollCounter = 0			# check on first pass			
 
 		def __str__(self):
 			return self.status
 
+		def pollCheck(self):
+			counter = int(self.device.pluginProps['pollingFrequency'])
+			if counter == 0:		# no polling for frequency = 0
+				return False
+				
+			self.pollCounter -= 1
+			if self.pollCounter <= 0:
+				self.pollCounter = counter
+				return True
+			else: 
+				return False
+		
 		def poll(self):
 			indigo.activePlugin.debugLog(u"Connecting to POP Server: " + self.device.name)
 			props = self.device.pluginProps		
@@ -287,6 +317,7 @@ class Plugin(indigo.PluginBase):
 		def __init__(self, device):
 			self.device = device
 			self.smtpQ = Queue()
+			self.pollCounter = 0			# check on first pass			
 
 		def __str__(self):
 			return self.status
@@ -384,12 +415,24 @@ class Plugin(indigo.PluginBase):
 					return False	
 				
 			except Exception, e:
-				indigo.activePlugin.errorLog(u"SMTP server connection error: " + str(e))
+				indigo.activePlugin.errorLog(self.device.name + u": SMTP server connection error: " + str(e))
 				smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
 				return False	
 
+		def pollCheck(self):
+			counter = int(self.device.pluginProps['pollingFrequency'])
+			if counter == 0:		# no polling for frequency = 0
+				return False
+				
+			self.pollCounter -= 1
+			if self.pollCounter <= 0:
+				self.pollCounter = counter
+				return True
+			else: 
+				return False
+		
 		def poll(self):
-			indigo.activePlugin.debugLog(u"SMTP poll, " + str(self.smtpQ.qsize()) + " items in queue")
+			indigo.activePlugin.debugLog(self.device.name + u": SMTP poll, " + str(self.smtpQ.qsize()) + u" items in queue")
 			while not self.smtpQ.empty():
 				action = self.smtpQ.get(False)
 				if not self.smtpSend(action):
@@ -410,17 +453,6 @@ class Plugin(indigo.PluginBase):
 
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
-
-
-	def startup(self):
-		self.debugLog(u"startup called")
-		try: 
-			self.updater.checkForUpdate()
-		except:
-			self.errorLog(u"Update checker error.")
-			
-	def shutdown(self):
-		self.debugLog(u"shutdown called")
 
 	####################
 
@@ -505,9 +537,15 @@ class Plugin(indigo.PluginBase):
 				self.debugLog(device.name + u": created encryptionType property")
 				
 			if device.deviceTypeId == "imapAccount":
-				useIDLE = device.pluginProps.get('useIDLE', "false")	
-				newProps["useIDLE"] = useIDLE		
-				self.debugLog(device.name + u": created useIDLE property")
+				useIDLE = device.pluginProps.get('useIDLE', "unknown")	
+				if useIDLE == "unknown":
+					newProps["useIDLE"] = "True"		
+					self.debugLog(device.name + u": created useIDLE property")
+				
+			pollingFrequency = device.pluginProps.get('pollingFrequency', "unknown")
+			if pollingFrequency == "unknown":
+				newProps["pollingFrequency"] = self.pluginProps.get('pollingFrequency', 15)
+				self.debugLog(device.name + u": created pollingFrequency property")
 		
 			newProps["devVersCount"] = kCurDevVersCount
 			device.replacePluginPropsOnServer(newProps)
@@ -556,16 +594,27 @@ class Plugin(indigo.PluginBase):
 	# becomes True. If this function returns prematurely then the plugin host process
 	# will log an error and attempt to call runConcurrentThread() again after several seconds.
 	def runConcurrentThread(self):
+	
+		updateCount = 0  
+		
 		try:
 			while True:
-				self.updater.checkForUpdate()
-				interval = int(self.pluginPrefs['pollingFrequency'])
-				if interval == 0:
-					self.sleep(60)
-				else:
-					self.pollAllServers()
-					self.debugLog(u"Next poll in %s minutes" % str(interval))
-					self.sleep(interval * 60)
+			
+				# do update check first
+				updateCount -= 1
+				if updateCount <= 0:
+					self.updater.checkForUpdate()
+					updateCount = int(self.pluginPrefs['updateFrequency'] * 60) # convert hours to minutes
+					
+				# now see if any email server devices need to poll
+				
+				for serverId, server in self.serverDict.items():
+					if server.pollCheck():
+						server.poll()
+					
+				# wait a minute and do it all again.
+				self.sleep(60)
+				
 		except self.StopThread:
 			pass
  
@@ -610,9 +659,9 @@ class Plugin(indigo.PluginBase):
    
 	########################################
 	def pollAllServers(self):
-		self.debugLog(u"Polling Email Servers")
+		self.debugLog(u"Polling All Email Servers")
 		for serverId, server in self.serverDict.items():
-			self.debugLog(u"serverId: " + str(serverId) + ", serverTypeId: " + server.device.deviceTypeId)
+			self.debugLog(u"Polling serverId: " + str(serverId) + ", serverTypeId: " + server.device.deviceTypeId + "(" + server.device.name + ")")
 			server.poll()
 
 	def pollServer(self, device):
