@@ -7,14 +7,12 @@
 			<Field id="address" type="textfield">
 				<Label>IMAP Server Name:</Label>
 			</Field>
-			<Field type="menu" id="encryptionType" defaultValue="SSL">
+			<Field type="menu" id="encryptionType" filter="">
 				<Label>Encryption:</Label>
-				<List>
-					<Option value="None">None</Option>
-					<Option value="SSL">SSL</Option>
-				</List>
+				<List method="listEncryptionTypes" class="self" filter="imapAccount" />
+				<CallbackMethod>encryptionSelected</CallbackMethod>
 			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="993">
+			<Field id="hostPort" type="textfield" defaultValue="">
 				<Label>Server Port:</Label>
 			</Field>
 			<Field id="serverLogin" type="textfield">
@@ -23,7 +21,7 @@
 			<Field id="serverPassword" type="textfield" secure="true">
 				<Label>Password:</Label>
 			</Field>
-			<Field id="useIDLE" type="checkbox" defaultValue="false">
+			<Field id="useIDLE" type="checkbox" defaultValue="true">
 				<Label>Use IDLE</Label>
 				<Description>Check if your IMAP server supports IDLE.</Description>
 			</Field>
@@ -40,7 +38,7 @@
 			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
 			</Field>
-			<Field id="delete" type="checkbox">
+			<Field id="delete" type="checkbox" defaultValue="true">
 				<Label>Delete:</Label>
 				<Description>Delete the email message after processing.</Description>
 			</Field>
@@ -86,15 +84,13 @@
 			<Field id="address" type="textfield">
 				<Label>POP Server Name:</Label>
 			</Field>
-			<Field type="menu" id="encryptionType" defaultValue="SSL">
+			<Field type="menu" id="encryptionType" filter="">
 				<Label>Encryption:</Label>
-				<List>
-					<Option value="None">None</Option>
-					<Option value="SSL">SSL</Option>
-				</List>
+				<List method="listEncryptionTypes" class="self" filter="popAccount" />
+				<CallbackMethod>encryptionSelected</CallbackMethod>
+			</Field>
 			<Field id="hostPort" type="textfield" defaultValue="995">
 				<Label>Server Port:</Label>
-			</Field>
 			</Field>
 			<Field id="serverLogin" type="textfield">
 				<Label>Login:</Label>
@@ -112,7 +108,7 @@
 			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
 			</Field>
-			<Field id="delete" type="checkbox">
+			<Field id="delete" type="checkbox" defaultValue="true">
 				<Label>Delete:</Label>
 				<Description>Delete the email message after processing.</Description>
 			</Field>
@@ -162,14 +158,11 @@
 			<Field id="address" type="textfield">
 				<Label>SMTP Server Name:</Label>
 			</Field>
-			<Field type="menu" id="encryptionType" defaultValue="SSL">
+			<Field type="menu" id="encryptionType" filter="">
 				<Label>Encryption:</Label>
-				<List>
-					<Option value="None">None</Option>
-					<Option value="SSL">SSL</Option>
-					<Option value="StartTLS">StartTLS</Option>
-				</List>
-			</Field>			
+				<List method="listEncryptionTypes" class="self" filter="smtpAccount" />
+				<CallbackMethod>encryptionSelected</CallbackMethod>
+			</Field>
 			<Field id="hostPort" type="textfield" defaultValue="465">
 				<Label>Server Port:</Label>
 			</Field>

@@ -456,6 +456,60 @@ class Plugin(indigo.PluginBase):
 
 	####################
 
+	def getDeviceConfigUiValues(self, pluginProps, typeId, devId):
+		self.debugLog("getDeviceConfigUiValues, typeID = " + typeId)
+		valuesDict = indigo.Dict(pluginProps)
+		errorsDict = indigo.Dict()
+
+		if len(valuesDict) == 0:
+			self.debugLog("getDeviceConfigUiValues: no values, populating encryptionType and hostPort")
+			if typeId == "imapAccount":
+				valuesDict["encryptionType"] = "SSL"
+				valuesDict["hostPort"] = "993"
+			elif typeId == "popAccount":
+				valuesDict["encryptionType"] = "SSL"
+				valuesDict["hostPort"] = "995"
+			elif typeId == "smtpAccount":
+				valuesDict["encryptionType"] = "SSL"
+				valuesDict["hostPort"] = "465"
+		else:
+			self.debugLog("getDeviceConfigUiValues: no change, already populated")
+
+		return (valuesDict, errorsDict)
+      
+	def listEncryptionTypes(self, filter=u'', valuesDict=None, typeId=u'', targetId=0):
+		encryptionTypes = []
+		if filter == "imapAccount":
+			encryptionTypes = [("SSL", "SSL"), ("None", "None")] 
+		elif filter == "popAccount":
+			encryptionTypes = [("SSL", "SSL"), ("None", "None")] 	
+		elif filter == "smtpAccount":
+			encryptionTypes = [("SSL", "SSL"), ("StartTLS", "StartTLS"), ("None", "None")] 
+		return encryptionTypes
+	
+	def encryptionSelected(self, valuesDict=None, filter=u'', typeId=u'', targetId=0):
+		encryptionType = valuesDict.get(u'encryptionType', u'')
+		if filter == "imapAccount":
+			if encryptionType == "None":
+				valuesDict['hostPort'] = 143
+			elif encryptionType == "SSL":
+				valuesDict['hostPort'] = 993 
+		elif filter == "popAccount":
+			if encryptionType == "None":
+				valuesDict['hostPort'] = 110
+			elif encryptionType == "SSL":
+				valuesDict['hostPort'] = 995
+		elif filter == "smtpAccount":
+			if encryptionType == "None":
+				valuesDict['hostPort'] = 587
+			elif encryptionType == "SSL":
+				valuesDict['hostPort'] = 465
+			elif encryptionType == "StartTLS":
+				valuesDict['hostPort'] = 587
+		return valuesDict
+	
+	####################
+
 	def triggerStartProcessing(self, trigger):
 		self.debugLog("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
 		assert trigger.id not in self.triggers
