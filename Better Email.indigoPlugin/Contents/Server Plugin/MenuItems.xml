@@ -27,7 +27,7 @@
 		</ConfigUI>
 	</MenuItem>
 	<MenuItem id="titleSeparator1" type="separator" />
-	<MenuItem id="menu0">
+	<MenuItem id="toggleDebugging">
 		<Name>Toggle Debugging</Name>
         <CallbackMethod>toggleDebugging</CallbackMethod>
 	</MenuItem>

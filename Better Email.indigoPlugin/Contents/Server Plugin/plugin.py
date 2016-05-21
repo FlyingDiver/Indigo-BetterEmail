@@ -3,8 +3,6 @@
 ####################
 # Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
-import indigo
-
 import re
 import ssl
 import smtplib

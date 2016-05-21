@@ -5,7 +5,7 @@
         <Name>Pattern Match in Email</Name>
 		<ConfigUI>
 			<Field type="menu" id="fieldPopUp" defaultValue="messageBody">
-				<Label>Popup Menu:</Label>
+				<Label>Match in:</Label>
 				<List>
 					<Option value="messageText">Message Text</Option>
 					<Option value="messageSubject">Message Subject</Option>
@@ -15,6 +15,12 @@
 			<Field id="regexPattern" type="textfield">
 				<Label>Regular Expression:</Label>
 			</Field>
+			<Field id="simpleSeparator2" type="separator"/>
+			<Field id="regexNote" type="label" fontSize="small" fontColor="darkgray">
+				<Label>For information on how to construct regular expressions, visit http://www.regular-expressions.info/tutorial.html</Label>
+			</Field>
 		</ConfigUI>
     </Event>
 </Events>
+
+
