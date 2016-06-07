@@ -8,6 +8,7 @@ import ssl
 import smtplib
 import poplib
 import imaplib2
+import time
 
 from email.Parser import Parser, FeedParser
 from email.mime.multipart import MIMEMultipart
@@ -443,14 +444,26 @@ class Plugin(indigo.PluginBase):
 	def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 		self.debug = pluginPrefs.get(u"showDebugInfo", False)
-
-		self.updater = GitHubPluginUpdater(self)
-
-		self.serverDict = dict()		# IMAP/POP servers to poll
-		self.triggers = { }
+		self.debugLog(u"Debugging enabled")
 
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
+
+	def startup(self):
+		indigo.server.log(u"Starting Better Email")
+
+		self.updater = GitHubPluginUpdater(self)
+		self.updater.checkForUpdate()
+		self.updateFrequency = self.pluginPrefs.get('updateFrequency', 24)
+		if self.updateFrequency > 0:
+			self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
+
+		self.serverDict = dict()		# IMAP/POP servers to poll
+		self.triggers = { }
+							
+	def shutdown(self):
+		indigo.server.log(u"Shutting down Better Email")
+
 
 	####################
 
@@ -546,11 +559,11 @@ class Plugin(indigo.PluginBase):
 		self.debugLog(u"validatePrefsConfigUi called")
 		errorMsgDict = indigo.Dict()
 		try:
-			poll = int(valuesDict['pollingFrequency'])
-			if (poll < 0) or (poll > 1440):
+			poll = int(valuesDict['updateFrequency'])
+			if (poll < 0) or (poll > 168):
 				raise
 		except:
-			errorMsgDict['pollingFrequency'] = u"Polling frequency is invalid - enter a valid number (between 0 and 1440)"
+			errorMsgDict['pollingFrequency'] = u"Polling frequency is invalid - enter a valid number (between 0 and 168)"
 		if len(errorMsgDict) > 0:
 			return (False, valuesDict, errorMsgDict)
 		return (True, valuesDict)
@@ -652,11 +665,12 @@ class Plugin(indigo.PluginBase):
 		try:
 			while True:
 			
-				# do update check first
-				updateCount -= 1
-				if updateCount <= 0:
-					self.updater.checkForUpdate()
-					updateCount = int(self.pluginPrefs['updateFrequency'] * 60) # convert hours to minutes
+				# Plugin Update check
+				
+				if self.updateFrequency > 0:
+					if time.time() > self.next_update_check:
+						self.updater.checkForUpdate()
+						self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
 					
 				# now see if any email server devices need to poll
 				
@@ -672,7 +686,16 @@ class Plugin(indigo.PluginBase):
  
 	########################################
 	def validateDeviceConfigUi(self, valuesDict, typeId, devId):
-		errorsDict = indigo.Dict()
+		self.debugLog(u"validateDeviceConfigUi called")
+		errorMsgDict = indigo.Dict()
+
+		try:
+			poll = int(valuesDict['pollingFrequency'])
+			if (poll < 0) or (poll > 1440):
+				raise
+		except:
+			errorMsgDict['pollingFrequency'] = u"Polling frequency is invalid - enter a valid number (between 0 and 1440)"
+
 		if len(errorsDict) > 0:
 			return (False, valuesDict, errorsDict)
 		return (True, valuesDict)
