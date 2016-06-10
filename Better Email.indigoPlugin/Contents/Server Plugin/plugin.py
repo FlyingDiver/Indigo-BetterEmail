@@ -455,7 +455,7 @@ class Plugin(indigo.PluginBase):
 		self.updater = GitHubPluginUpdater(self)
 		self.updater.checkForUpdate()
 		self.updateFrequency = self.pluginPrefs.get('updateFrequency', 24)
-		if self.updateFrequency > 0:
+		if float(self.updateFrequency) > 0.0:
 			self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
 
 		self.serverDict = dict()		# IMAP/POP servers to poll
@@ -558,13 +558,11 @@ class Plugin(indigo.PluginBase):
 	def validatePrefsConfigUi(self, valuesDict):
 		self.debugLog(u"validatePrefsConfigUi called")
 		errorsDict = indigo.Dict()
-		try:
-			poll = int(valuesDict['updateFrequency'])
-			if (poll < 0) or (poll > 168):
-				raise
-		except:
-			errorsDict['pollingFrequency'] = u"Polling frequency is invalid - enter a valid number (between 0 and 168)"
-		if len(errorMsgDict) > 0:
+		updateFrequency = valuesDict['updateFrequency']
+		if len(updateFrequency) == 0 or int(updateFrequency) < 0 or int(updateFrequency) > 168:
+			errorsDict['updateFrequency'] = u"Update frequency is invalid - enter number of hours between 0 and 168"
+
+		if len(errorsDict) > 0:
 			return (False, valuesDict, errorsDict)
 		return (True, valuesDict)
 
@@ -572,6 +570,7 @@ class Plugin(indigo.PluginBase):
 	def closedPrefsConfigUi(self, valuesDict, userCancelled):
 		if not userCancelled:
 			self.debug = valuesDict.get("showDebugInfo", False)
+			self.updateFrequency = valuesDict.get("updateFrequency", 24)
 			if self.debug:
 				self.debugLog(u"Debug logging enabled")
 			else:
@@ -667,10 +666,10 @@ class Plugin(indigo.PluginBase):
 			
 				# Plugin Update check
 				
-				if self.updateFrequency > 0:
+				if float(self.updateFrequency) > 0.0:
 					if time.time() > self.next_update_check:
 						self.updater.checkForUpdate()
-						self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
+						self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
 					
 				# now see if any email server devices need to poll
 				
@@ -703,10 +702,7 @@ class Plugin(indigo.PluginBase):
 	########################################
 	def validateActionConfigUi(self, valuesDict, typeId, devId):
 		errorsDict = indigo.Dict()
-		try:
-			pass
-		except:
-			pass
+
 		if len(errorsDict) > 0:
 			return (False, valuesDict, errorsDict)
 		return (True, valuesDict)
