@@ -120,50 +120,59 @@ class Plugin(indigo.PluginBase):
 				except Exception, e:
 					indigo.activePlugin.debugLog(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
 					pass
+					
 				try:
 					indigo.activePlugin.debugLog(self.device.name + u": Fetching Message # " + messageNum)
 					typ, data = self.connection.fetch(messageNum, '(RFC822)')
 					parser = Parser()
 					message = parser.parsestr(data[0][1])
+				except Exception, e:
+					indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
+					pass
 					
-					bytes, encoding = decode_header(message.get("Subject"))[0]
-					if encoding:
-						messageSubject = bytes.decode(encoding)
-					else:
-						messageSubject = message.get("Subject")
-					self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
-					indigo.activePlugin.debugLog(u"Received Message Subject: " + messageSubject)
-					
-					bytes, encoding = decode_header(message.get("From"))[0]
-					if encoding:
-						messageFrom = bytes.decode(encoding)
-					else:
-						messageFrom = message.get("From")
-					self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
-					indigo.activePlugin.debugLog(u"Received Message From: " + messageFrom)
-
-					messageID = message.get("Message-Id")
-					self.device.updateStateOnServer(key="lastMessage", value=messageID)
+				bytes, encoding = decode_header(message.get("Subject"))[0]
+				if encoding:
+					messageSubject = bytes.decode(encoding)
+				else:
+					messageSubject = message.get("Subject")
+				indigo.activePlugin.debugLog(u"Received Message Subject: " + messageSubject)
 				
+				bytes, encoding = decode_header(message.get("From"))[0]
+				if encoding:
+					messageFrom = bytes.decode(encoding)
+				else:
+					messageFrom = message.get("From")
+				indigo.activePlugin.debugLog(u"Received Message From: " + messageFrom)
+
+				messageID = message.get("Message-Id")
+				indigo.activePlugin.debugLog(u"Received Message ID: " + messageID)
+			
+				try:
 					if message.is_multipart():
 						part0 = message.get_payload(0)		# we only look at the first alternative content part
 						messageText = part0.get_payload(decode=True).decode(part0.get_content_charset())
 					else:
 						messageText = message.get_payload(decode=True).decode(message.get_content_charset())
-					self.device.updateStateOnServer(key="messageText", value=messageText)
 					indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
-				
-					indigo.activePlugin.triggerCheck(self.device)
-					
-					# If configured to do so, delete the message, otherwise mark it as processed
-					if self.imapProps['delete']:
-						indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
-						t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
-					else:
-						# Mark the message as successfully processed
-						t, resp = self.connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
+			
 				except Exception, e:
-					indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
+					indigo.activePlugin.debugLog('Error decoding Body of Message # ' + messageNum + ": " + str(e))
+					messageText = u""	
+				
+				self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
+				self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
+				self.device.updateStateOnServer(key="lastMessage", value=messageID)
+				self.device.updateStateOnServer(key="messageText", value=messageText)
+				indigo.activePlugin.triggerCheck(self.device)
+
+				# If configured to do so, delete the message, otherwise mark it as processed
+				if self.imapProps['delete']:
+					indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
+					t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
+				else:
+					# Mark the message as successfully processed
+					t, resp = self.connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
+					
 			self.connection.expunge()
 		
 				
@@ -285,7 +294,7 @@ class Plugin(indigo.PluginBase):
 						else:
 							messageText = message.get_payload(decode=True).decode(message.get_content_charset())
 						self.device.updateStateOnServer(key="messageText", value=messageText)					
-						indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
+#						indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
 
 						self.device.updateStateOnServer(key="lastMessage", value=uidl)
 					
@@ -535,23 +544,38 @@ class Plugin(indigo.PluginBase):
 		self.debugLog("Checking Triggers for Device %s (%d)" % (device.name, device.id))
 	
 		for triggerId, trigger in sorted(self.triggers.iteritems()):
-			self.debugLog("\tChecking Trigger %s (%d)" % (trigger.name, trigger.id))
-			
+			self.debugLog("\tChecking Trigger %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+
+			if trigger.pluginProps["serverID"] != str(device.id):
+				self.debugLog("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
+			else:
+				if trigger.pluginTypeId == "regexMatch":
+					field = trigger.pluginProps["fieldPopUp"]
+					pattern = trigger.pluginProps["regexPattern"]
+					self.debugLog("\tChecking Device State %s for Pattern: %s" % (field, pattern))
+					cPattern = re.compile(pattern)
+					match = cPattern.search(device.states[field])
+					if match:
+						regexMatch = match.group()
+						self.debugLog("\tExecuting Trigger %s (%d), match: %s" % (trigger.name, trigger.id, regexMatch))
+						device.updateStateOnServer(key="regexMatch", value=regexMatch)
+						indigo.trigger.execute(trigger)
+					else:
+						self.debugLog("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+				elif trigger.pluginTypeId == "stringMatch":
+					field = trigger.pluginProps["fieldPopUp"]
+					pattern = trigger.pluginProps["stringPattern"]
+					self.debugLog("\tChecking Device State %s for string: %s" % (field, pattern))
+					if device.states[field] == pattern:
+						self.debugLog("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+						indigo.trigger.execute(trigger)
+					else:
+						self.debugLog("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+				else:
+					self.debugLog("\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+				
 			# pattern matching here		
 			
-			field = trigger.pluginProps["fieldPopUp"]
-			pattern = trigger.pluginProps["regexPattern"]
-			self.debugLog("\tChecking Device State %s for Pattern: %s" % (field, pattern))
-	
-			cPattern = re.compile(pattern)
-			match = cPattern.search(device.states[field])
-			if match:
-				regexMatch = match.group()
-				self.debugLog("\tExecuting Trigger %s (%d), match: %s" % (trigger.name, trigger.id, regexMatch))
-				device.updateStateOnServer(key="regexMatch", value=regexMatch)
-				indigo.trigger.execute(trigger)
-			else:
-				self.debugLog("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
 			
 	
 	####################
@@ -608,7 +632,7 @@ class Plugin(indigo.PluginBase):
 				
 			pollingFrequency = device.pluginProps.get('pollingFrequency', "unknown")
 			if pollingFrequency == "unknown":
-				newProps["pollingFrequency"] = self.pluginProps.get('pollingFrequency', 15)
+				newProps["pollingFrequency"] = device.pluginProps.get('pollingFrequency', 15)
 				self.debugLog(device.name + u": created pollingFrequency property")
 		
 			newProps["devVersCount"] = kCurDevVersCount
@@ -687,6 +711,34 @@ class Plugin(indigo.PluginBase):
 	def validateDeviceConfigUi(self, valuesDict, typeId, devId):
 		self.debugLog(u"validateDeviceConfigUi called")
 		errorsDict = indigo.Dict()
+
+		try:
+			name = valuesDict['address']
+			if len(name) < 1:
+				raise
+		except:
+			errorsDict['address'] = u"Enter name of server"
+
+		try:
+			hostPort = valuesDict['hostPort']
+			if len(hostPort) < 1:
+				raise
+		except:
+			errorsDict['hostPort'] = u"Enter server port"
+
+		try:
+			serverLogin = valuesDict['serverLogin']
+			if len(serverLogin) < 1:
+				raise
+		except:
+			errorsDict['serverLogin'] = u"Enter login name"
+
+		try:
+			serverPassword = valuesDict['serverPassword']
+			if len(serverPassword) < 1:
+				raise
+		except:
+			errorsDict['serverPassword'] = u"Enter login password"
 
 		try:
 			poll = int(valuesDict['pollingFrequency'])
@@ -773,5 +825,15 @@ class Plugin(indigo.PluginBase):
 		retList =[]
 		for dev in indigo.devices.iter():
 			if (dev.pluginId.lower().find("betteremail") > -1) and (dev.deviceTypeId == "smtpAccount"): 
-				retList.append(dev.id,dev.name)
+				retList.append((dev.id,dev.name))
+		retList.sort(key=lambda tup: tup[1])
 		return retList
+		
+	def pickInboundServer(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+		retList =[]
+		for dev in indigo.devices.iter():
+			if (dev.pluginId.lower().find("betteremail") > -1) and ((dev.deviceTypeId == "imapAccount") or (dev.deviceTypeId == "popAccount")): 
+				retList.append((dev.id,dev.name))
+		retList.sort(key=lambda tup: tup[1])
+		return retList
+		
