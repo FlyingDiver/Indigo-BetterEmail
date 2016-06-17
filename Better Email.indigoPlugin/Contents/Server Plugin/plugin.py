@@ -237,21 +237,20 @@ class Plugin(indigo.PluginBase):
 		
 		def poll(self):
 			indigo.activePlugin.debugLog(u"Connecting to POP Server: " + self.device.name)
-			props = self.device.pluginProps		
 			oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages",indigo.List())
 			newMessageList = indigo.List()
 
 			try:
-				if self.props['encryptionType'] == 'SSL':
-					connection = poplib.POP3_SSL(props['address'].encode('ascii','ignore'), int(props['hostPort']))
-				elif self.props['encryptionType'] == 'None':
-					connection = poplib.POP3(props['address'].encode('ascii','ignore'), int(props['hostPort']))
+				if self.device.pluginProps['encryptionType'] == 'SSL':
+					connection = poplib.POP3_SSL(self.device.pluginProps['address'].encode('ascii','ignore'), int(self.device.pluginProps['hostPort']))
+				elif self.device.pluginProps['encryptionType'] == 'None':
+					connection = poplib.POP3(self.device.pluginProps['address'].encode('ascii','ignore'), int(self.device.pluginProps['hostPort']))
 				else:
-					indigo.activePlugin.errorLog(u"Unknown encryption type: " + self.imapProps['encryptionType'])
+					indigo.activePlugin.errorLog(u"Unknown encryption type: " + self.device.pluginProps['encryptionType'])
 					return
 					
-				connection.user(props['serverLogin'])
-				connection.pass_(props['serverPassword'])				
+				connection.user(self.device.pluginProps['serverLogin'])
+				connection.pass_(self.device.pluginProps['serverPassword'])				
 				(numMessages, totalSize) = connection.stat()				
 				if numMessages == 0:
 					indigo.activePlugin.debugLog(u"No messages to process")
