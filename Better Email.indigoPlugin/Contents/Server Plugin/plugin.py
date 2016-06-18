@@ -293,14 +293,12 @@ class Plugin(indigo.PluginBase):
 						else:
 							messageText = message.get_payload(decode=True).decode(message.get_content_charset())
 						self.device.updateStateOnServer(key="messageText", value=messageText)					
-#						indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
-
 						self.device.updateStateOnServer(key="lastMessage", value=uidl)
 					
 						indigo.activePlugin.triggerCheck(self.device)
 
 						# If configured to do so, delete the message, otherwise mark it as processed
-						if props['delete']:
+						if self.device.pluginProps['delete']:
 							indigo.activePlugin.debugLog(u"Deleting Message # " + str(messageNum))
 							connection.dele(messageNum)
 
