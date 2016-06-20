@@ -64,15 +64,15 @@
 				<TriggerLabel>Message From</TriggerLabel>
 				<ControlPageLabel>Message From</ControlPageLabel>
 			</State>
-			<State id="serverStatus">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Server Connection Status</TriggerLabel>
-				<ControlPageLabel>Server Status</ControlPageLabel>
-			</State>
 			<State id="regexMatch">
 				<ValueType>String</ValueType>
 				<TriggerLabel>RegEx Match Result</TriggerLabel>
 				<ControlPageLabel>>RegEx Match Result</ControlPageLabel>
+			</State>
+			<State id="serverStatus">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Server Connection Status</TriggerLabel>
+				<ControlPageLabel>Server Status</ControlPageLabel>
 			</State>
 		</States>
 		<UiDisplayStateId>serverStatus</UiDisplayStateId>
@@ -134,15 +134,15 @@
 				<TriggerLabel>Message From</TriggerLabel>
 				<ControlPageLabel>Message From</ControlPageLabel>
 			</State>
-			<State id="serverStatus">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Server Connection Status</TriggerLabel>
-				<ControlPageLabel>Server Status</ControlPageLabel>
-			</State>
 			<State id="regexMatch">
 				<ValueType>String</ValueType>
 				<TriggerLabel>RegEx Match Result</TriggerLabel>
 				<ControlPageLabel>>RegEx Match Result</ControlPageLabel>
+			</State>
+			<State id="serverStatus">
+				<ValueType>String</ValueType>
+				<TriggerLabel>Server Connection Status</TriggerLabel>
+				<ControlPageLabel>Server Status</ControlPageLabel>
 			</State>
 		</States>
 		<UiDisplayStateId>serverStatus</UiDisplayStateId>

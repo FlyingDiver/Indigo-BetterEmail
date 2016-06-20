@@ -153,7 +153,7 @@ class Plugin(indigo.PluginBase):
 						messageText = part0.get_payload(decode=True).decode(part0.get_content_charset())
 					else:
 						messageText = message.get_payload(decode=True).decode(message.get_content_charset())
-					indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
+#					indigo.activePlugin.debugLog(u"Received Message Text: " + messageText)
 			
 				except Exception, e:
 					indigo.activePlugin.debugLog('Error decoding Body of Message # ' + messageNum + ": " + str(e))
@@ -161,8 +161,8 @@ class Plugin(indigo.PluginBase):
 				
 				self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
 				self.device.updateStateOnServer(key="messageSubject", value=messageSubject)					
-				self.device.updateStateOnServer(key="lastMessage", value=messageID)
 				self.device.updateStateOnServer(key="messageText", value=messageText)
+				self.device.updateStateOnServer(key="lastMessage", value=messageID)
 				indigo.activePlugin.triggerCheck(self.device)
 
 				# If configured to do so, delete the message, otherwise mark it as processed
@@ -205,12 +205,14 @@ class Plugin(indigo.PluginBase):
 				
 				# close the connection and log out
 				self.device.updateStateOnServer(key="serverStatus", value="Success")
+				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 				self.connection.close()
 				self.connection.logout()
 				indigo.activePlugin.debugLog(u"Logged out from IMAP server: " + self.device.name)
 			except Exception, e:
 				indigo.activePlugin.errorLog(u"IMAP server connection error: " + str(e))
 				self.device.updateStateOnServer(key="serverStatus", value="Failure")
+				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 	
 		
 	# POP specific class and methods
@@ -277,7 +279,6 @@ class Plugin(indigo.PluginBase):
 							messageSubject = bytes.decode(encoding)
 						else:
 							messageSubject = message.get("Subject")
-						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
 						indigo.activePlugin.debugLog(u"Received Message Subject: " + messageSubject)
 
 						bytes, encoding = decode_header(message.get("From"))[0]
@@ -285,16 +286,23 @@ class Plugin(indigo.PluginBase):
 							messageFrom = bytes.decode(encoding)
 						else:
 							messageFrom = message.get("From")
-						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
 						indigo.activePlugin.debugLog(u"Received Message From: " + messageFrom)
 
-						if message.is_multipart():
-							messageText = message.get_payload(0).get_payload(decode=True).decode(message.get_content_charset())
-						else:
-							messageText = message.get_payload(decode=True).decode(message.get_content_charset())
+						try:
+							if message.is_multipart():
+								part0 = message.get_payload(0)		# we only look at the first alternative content part
+								messageText = part0.get_payload(decode=True).decode(part0.get_content_charset())
+							else:
+								messageText = message.get_payload(decode=True).decode(message.get_content_charset())
+				
+						except Exception, e:
+							indigo.activePlugin.debugLog('Error decoding Body of Message # ' + messageNum + ": " + str(e))
+							messageText = u""	
+				
+						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)					
+						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
 						self.device.updateStateOnServer(key="messageText", value=messageText)					
 						self.device.updateStateOnServer(key="lastMessage", value=uidl)
-					
 						indigo.activePlugin.triggerCheck(self.device)
 
 						# If configured to do so, delete the message, otherwise mark it as processed
@@ -309,12 +317,14 @@ class Plugin(indigo.PluginBase):
 				# close the connection and log out
 				indigo.activePlugin.pluginPrefs[u"readMessages"] = newMessageList
 				self.device.updateStateOnServer(key="serverStatus", value="Success")
+				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 				connection.quit()
 				indigo.activePlugin.debugLog(u"Logged out from POP server")
 				
 			except Exception, e:
 				indigo.activePlugin.errorLog(u"POP server connection error: " + str(e))
 				self.device.updateStateOnServer(key="serverStatus", value="Failure")	
+				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 		
 	# SMTP specific class and methods
 	class SMTPServer(object):
@@ -393,6 +403,7 @@ class Plugin(indigo.PluginBase):
 					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
 					connection.quit()
 					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+					smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 					return True
 
 				elif smtpProps['encryptionType'] == 'StartTLS':
@@ -404,6 +415,7 @@ class Plugin(indigo.PluginBase):
 					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
 					connection.quit()
 					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+					smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 					return True
 
 				elif smtpProps['encryptionType'] == 'None':
@@ -413,6 +425,7 @@ class Plugin(indigo.PluginBase):
 					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
 					connection.quit()
 					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+					smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 					return True
 
 				else:
@@ -422,6 +435,7 @@ class Plugin(indigo.PluginBase):
 			except Exception, e:
 				indigo.activePlugin.errorLog(self.device.name + u": SMTP server connection error: " + str(e))
 				smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
+				smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 				return False	
 
 		def pollCheck(self):
