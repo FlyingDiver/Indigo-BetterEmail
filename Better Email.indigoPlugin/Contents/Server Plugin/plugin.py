@@ -9,6 +9,7 @@ import smtplib
 import poplib
 import imaplib2
 import time
+import logging
 
 from email.Parser import Parser, FeedParser
 from email.mime.text import MIMEText
@@ -33,6 +34,7 @@ class Plugin(indigo.PluginBase):
 	class IMAPServer(object):
 
 		def __init__(self, device):
+			self.logger = logging.getLogger("Plugin.IMAPServer")
 			self.device = device
 			self.imapProps = self.device.pluginProps
 			if self.imapProps['useIDLE']:
@@ -54,43 +56,36 @@ class Plugin(indigo.PluginBase):
 		def connect(self):
 			try:
 				if self.imapProps['encryptionType'] == 'SSL':
-					indigo.activePlugin.debugLog(
-						self.device.name + u": Doing connect using encryptionType = " + self.imapProps[
-							'encryptionType'])
+					self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
 					self.connection = imaplib2.IMAP4_SSL(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
 					self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
 					self.connection.select("INBOX")
 
 				elif self.imapProps['encryptionType'] == 'StartTLS':
-					indigo.activePlugin.debugLog(
-						self.device.name + u": Doing connect using encryptionType = " + self.imapProps[
-							'encryptionType'])
-					self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'),
-					                                 int(self.imapProps['hostPort']))
-					indigo.activePlugin.debugLog(self.device.name + u": Doing starttls()")
+					self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
+					self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'),int(self.imapProps['hostPort']))
+					self.logger.debug(self.device.name + u": Doing starttls()")
 					self.connection.starttls()
-					indigo.activePlugin.debugLog(self.device.name + u": Doing login()")
+					self.logger.debug(self.device.name + u": Doing login()")
 					self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
-					indigo.activePlugin.debugLog(self.device.name + u": Doing select(\"INBOX\")")
+					self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
 					self.connection.select("INBOX")
 
 				elif self.imapProps['encryptionType'] == 'None':
-					indigo.activePlugin.debugLog(
-						self.device.name + u": Doing connect using encryptionType = " + self.imapProps[
-							'encryptionType'])
+					self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
 					self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
 					self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
 					self.connection.select("INBOX")
 
 				else:
-					indigo.activePlugin.errorLog(u"Unknown encryption type: " + self.imapProps['encryptionType'])
+					self.logger.error(u"Unknown encryption type: " + self.imapProps['encryptionType'])
 
 			except Exception, e:
-				indigo.activePlugin.debugLog(self.device.name + ': Error connecting to IMAP server: ' + str(e))
+				self.logger.exception(self.device.name + ': Error connecting to IMAP server: ' + str(e))
 				raise
 
 		def idle(self):
-			indigo.activePlugin.debugLog(self.device.name + u": idle() called")
+			self.logger.debug(self.device.name + u": idle() called")
 
 			def callback(args):
 				if not self.event.isSet():
@@ -107,33 +102,31 @@ class Plugin(indigo.PluginBase):
 
 				if self.needsync:
 					self.event.clear()
-					indigo.activePlugin.debugLog(self.device.name + u": IDLE Event Received")
+					self.logger.debug(self.device.name + u": IDLE Event Received")
 					self.checkMsgs()
 
 		def checkMsgs(self):
-			indigo.activePlugin.debugLog(self.device.name + u": Doing checkMsgs")
+			self.logger.debug(self.device.name + u": Doing checkMsgs")
 			typ, msg_ids = self.connection.search(None, 'ALL')
-			indigo.activePlugin.debugLog(self.device.name + u": msg_ids = " + str(msg_ids))
+			self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
 			for messageNum in msg_ids[0].split():
-				indigo.activePlugin.debugLog(self.device.name + u": Checking Message # " + messageNum)
+				self.logger.debug(self.device.name + u": Checking Message # " + messageNum)
 				try:
 					typ, resp = self.connection.fetch(messageNum, '(FLAGS)')
 					if "$IndigoProcessed" in resp[0]:
-						indigo.activePlugin.debugLog(
-							self.device.name + u": Message # " + messageNum + " already seen, skipping...")
+						self.logger.debug(self.device.name + u": Message # " + messageNum + " already seen, skipping...")
 						continue
 				except Exception, e:
-					indigo.activePlugin.debugLog(
-						self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
+					self.logger.exception(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
 					pass
 
 				try:
-					indigo.activePlugin.debugLog(self.device.name + u": Fetching Message # " + messageNum)
+					self.logger.debug(self.device.name + u": Fetching Message # " + messageNum)
 					typ, data = self.connection.fetch(messageNum, '(RFC822)')
 					parser = Parser()
 					message = parser.parsestr(data[0][1])
 				except Exception, e:
-					indigo.activePlugin.debugLog('Error fetching Message # ' + messageNum + ": " + str(e))
+					self.logger.exception('Error fetching Message # ' + messageNum + ": " + str(e))
 					pass
 
 				bytes, encoding = decode_header(message.get("Subject"))[0]
@@ -141,17 +134,24 @@ class Plugin(indigo.PluginBase):
 					messageSubject = bytes.decode(encoding)
 				else:
 					messageSubject = message.get("Subject")
-				indigo.activePlugin.debugLog(u"Received Message Subject: " + messageSubject)
+				self.logger.debug(u"Received Message Subject: " + messageSubject)
 
 				bytes, encoding = decode_header(message.get("From"))[0]
 				if encoding:
 					messageFrom = bytes.decode(encoding)
 				else:
 					messageFrom = message.get("From")
-				indigo.activePlugin.debugLog(u"Received Message From: " + messageFrom)
+				self.logger.debug(u"Received Message From: " + messageFrom)
+
+				bytes, encoding = decode_header(message.get("To"))[0]
+				if encoding:
+					messageTo = bytes.decode(encoding)
+				else:
+					messageTo = message.get("To")
+				self.logger.debug(u"Received Message To: " + messageTo)
 
 				messageID = message.get("Message-Id")
-				indigo.activePlugin.debugLog(u"Received Message ID: " + messageID)
+				self.logger.debug(u"Received Message ID: " + messageID)
 
 				try:
 					if message.is_multipart():
@@ -169,18 +169,23 @@ class Plugin(indigo.PluginBase):
 							messageText = message.get_payload()
 
 				except Exception, e:
-					indigo.activePlugin.debugLog('Error decoding Body of Message # ' + messageNum + ": " + str(e))
+					self.logger.exception('Error decoding Body of Message # ' + messageNum + ": " + str(e))
 					messageText = u""
 
-				self.device.updateStateOnServer(key="messageFrom", value=messageFrom)
-				self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
-				self.device.updateStateOnServer(key="messageText", value=messageText)
-				self.device.updateStateOnServer(key="lastMessage", value=messageID)
+				stateList = [
+							{'key':'messageFrom', 	'value':messageFrom},
+							{'key':'messageSubject','value':messageSubject},
+							{'key':'messageText',   'value':messageText},
+							{'key':'lastMessage', 	'value':messageID}
+				]
+				self.device.updateStatesOnServer(stateList)
 				indigo.activePlugin.triggerCheck(self.device)
+				broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}
+				indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
 
 				# If configured to do so, delete the message, otherwise mark it as processed
 				if self.imapProps['delete']:
-					indigo.activePlugin.debugLog(u"Deleting message # " + messageNum)
+					self.logger.debug(u"Deleting message # " + messageNum)
 					t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
 				else:
 					# Mark the message as successfully processed
@@ -205,10 +210,10 @@ class Plugin(indigo.PluginBase):
 
 		def poll(self):
 			if self.imapProps['useIDLE']:  # skip poll when using IDLE
-				indigo.activePlugin.debugLog(u"Skipping IMAP Server using IDLE: " + self.device.name)
+				self.logger.debug(u"Skipping IMAP Server using IDLE: " + self.device.name)
 				return
 
-			indigo.activePlugin.debugLog(u"Polling IMAP Server: " + self.device.name)
+			self.logger.debug(u"Polling IMAP Server: " + self.device.name)
 
 			try:
 				self.connect()
@@ -219,9 +224,9 @@ class Plugin(indigo.PluginBase):
 				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 				self.connection.close()
 				self.connection.logout()
-				indigo.activePlugin.debugLog(u"Logged out from IMAP server: " + self.device.name)
+				self.logger.debug(u"Logged out from IMAP server: " + self.device.name)
 			except Exception, e:
-				indigo.activePlugin.errorLog(u"IMAP server connection error: " + str(e))
+				self.logger.exception(u"IMAP server connection error: " + str(e))
 				self.device.updateStateOnServer(key="serverStatus", value="Failure")
 				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
@@ -229,6 +234,7 @@ class Plugin(indigo.PluginBase):
 	class POPServer(object):
 
 		def __init__(self, device):
+			self.logger = logging.getLogger("Plugin.POPServer")
 			self.device = device
 			self.pollCounter = 0  # check on first pass
 
@@ -248,7 +254,7 @@ class Plugin(indigo.PluginBase):
 				return False
 
 		def poll(self):
-			indigo.activePlugin.debugLog(u"Connecting to POP Server: " + self.device.name)
+			self.logger.debug(u"Connecting to POP Server: " + self.device.name)
 			oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages", indigo.List())
 			newMessageList = indigo.List()
 
@@ -260,7 +266,7 @@ class Plugin(indigo.PluginBase):
 					connection = poplib.POP3(self.device.pluginProps['address'].encode('ascii', 'ignore'),
 					                         int(self.device.pluginProps['hostPort']))
 				else:
-					indigo.activePlugin.errorLog(
+					self.logger.error(
 						u"Unknown encryption type: " + self.device.pluginProps['encryptionType'])
 					return
 
@@ -268,20 +274,20 @@ class Plugin(indigo.PluginBase):
 				connection.pass_(self.device.pluginProps['serverPassword'])
 				(numMessages, totalSize) = connection.stat()
 				if numMessages == 0:
-					indigo.activePlugin.debugLog(u"No messages to process")
+					self.logger.debug(u"No messages to process")
 
 				for i in range(numMessages):
 					messageNum = i + 1
-					indigo.activePlugin.debugLog(u"Retrieving Message # " + str(messageNum))
+					self.logger.debug(u"Retrieving Message # " + str(messageNum))
 					try:
 						(server_msg, body, octets) = connection.retr(messageNum)
 						uidl = connection.uidl(messageNum).split()[2]
 						newMessageList.append(str(uidl))
 						if uidl in oldMessageList:
-							indigo.activePlugin.debugLog(u"Message " + uidl + " already seen, skipping...")
+							self.logger.debug(u"Message " + uidl + " already seen, skipping...")
 							continue
 
-						indigo.activePlugin.debugLog(u"Parsing message " + uidl)
+						self.logger.debug(u"Parsing message " + uidl)
 						parser = FeedParser()
 						for line in body:
 							parser.feed(str(line + '\n'))
@@ -292,14 +298,21 @@ class Plugin(indigo.PluginBase):
 							messageSubject = bytes.decode(encoding)
 						else:
 							messageSubject = message.get("Subject")
-						indigo.activePlugin.debugLog(u"Received Message Subject: " + messageSubject)
+						self.logger.debug(u"Received Message Subject: " + messageSubject)
 
 						bytes, encoding = decode_header(message.get("From"))[0]
 						if encoding:
 							messageFrom = bytes.decode(encoding)
 						else:
 							messageFrom = message.get("From")
-						indigo.activePlugin.debugLog(u"Received Message From: " + messageFrom)
+						self.logger.debug(u"Received Message From: " + messageFrom)
+
+						bytes, encoding = decode_header(message.get("To"))[0]
+						if encoding:
+							messageTo = bytes.decode(encoding)
+						else:
+							messageTo = message.get("To")
+						self.logger.debug(u"Received Message To: " + messageTo)
 
 						try:
 							if message.is_multipart():
@@ -317,23 +330,27 @@ class Plugin(indigo.PluginBase):
 									messageText = message.get_payload()
 
 						except Exception, e:
-							indigo.activePlugin.debugLog(
-								'Error decoding Body of Message # ' + messageNum + ": " + str(e))
+							self.logger.exception('Error decoding Body of Message # ' + messageNum + ": " + str(e))
 							messageText = u""
 
-						self.device.updateStateOnServer(key="messageFrom", value=messageFrom)
-						self.device.updateStateOnServer(key="messageSubject", value=messageSubject)
-						self.device.updateStateOnServer(key="messageText", value=messageText)
-						self.device.updateStateOnServer(key="lastMessage", value=uidl)
+						stateList = [
+									{'key':'messageFrom', 	'value':messageFrom},
+									{'key':'messageSubject','value':messageSubject},
+									{'key':'messageText',   'value':messageText},
+									{'key':'lastMessage', 	'value':uidl}
+						]
+						self.device.updateStatesOnServer(stateList)
+						broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}
+						indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
 						indigo.activePlugin.triggerCheck(self.device)
 
 						# If configured to do so, delete the message, otherwise mark it as processed
 						if self.device.pluginProps['delete']:
-							indigo.activePlugin.debugLog(u"Deleting Message # " + str(messageNum))
+							self.logger.debug(u"Deleting Message # " + str(messageNum))
 							connection.dele(messageNum)
 
 					except Exception, e:
-						indigo.activePlugin.debugLog('Error fetching Message ' + str(messageNum) + ": " + str(e))
+						self.logger.exception('Error fetching Message ' + str(messageNum) + ": " + str(e))
 						pass
 
 				# close the connection and log out
@@ -341,10 +358,10 @@ class Plugin(indigo.PluginBase):
 				self.device.updateStateOnServer(key="serverStatus", value="Success")
 				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 				connection.quit()
-				indigo.activePlugin.debugLog(u"Logged out from POP server")
+				self.logger.debug(u"Logged out from POP server")
 
 			except Exception, e:
-				indigo.activePlugin.errorLog(u"POP server connection error: " + str(e))
+				self.logger.exception(u"POP server connection error: " + str(e))
 				self.device.updateStateOnServer(key="serverStatus", value="Failure")
 				self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
@@ -352,6 +369,7 @@ class Plugin(indigo.PluginBase):
 	class SMTPServer(object):
 
 		def __init__(self, device):
+			self.logger = logging.getLogger("Plugin.SMTPServer")
 			self.device = device
 			self.smtpQ = Queue()
 			self.pollCounter = 0  # check on first pass
@@ -374,7 +392,7 @@ class Plugin(indigo.PluginBase):
 					message[headername] = headervalue
 				return message
 
-			indigo.activePlugin.debugLog(u"Sending to SMTP Server: " + self.device.name)
+			self.logger.debug(u"Sending to SMTP Server: " + self.device.name)
 
 			smtpDevice = indigo.devices[pluginAction.deviceId]
 			smtpProps = smtpDevice.pluginProps
@@ -382,19 +400,19 @@ class Plugin(indigo.PluginBase):
 			if "emailTo" in pluginAction.props:
 				emailTo = indigo.activePlugin.substitute(pluginAction.props["emailTo"])
 			else:
-				indigo.activePlugin.errorLog(u"No emailTo property in plugin property dict")
+				self.logger.error(u"No emailTo property in plugin property dict")
 				return
 
 			if "emailSubject" in pluginAction.props:
 				emailSubject = indigo.activePlugin.substitute(pluginAction.props["emailSubject"])
 			else:
-				indigo.activePlugin.errorLog(u"No emailSubject property in plugin property dict")
+				self.logger.error(u"No emailSubject property in plugin property dict")
 				return
 
 			if "emailMessage" in pluginAction.props:
 				emailMessage = indigo.activePlugin.substitute(pluginAction.props["emailMessage"])
 			else:
-				indigo.activePlugin.errorLog(u"No emailMessage property in plugin property dict")
+				self.logger.error(u"No emailMessage property in plugin property dict")
 				return
 
 			emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
@@ -409,60 +427,60 @@ class Plugin(indigo.PluginBase):
 			else:
 				msg = MIMEText(emailMessage, 'plain')
 
-			msg = addheader(msg, 'From', smtpProps["fromAddress"])
+			toAddresses = emailTo.split(",") + emailCC.split(",") + emailBCC.split(",")
+			emailFrom = smtpProps["fromAddress"]
+			
+			msg = addheader(msg, 'From', emailFrom)
 			msg = addheader(msg, 'Subject', emailSubject)
 			msg = addheader(msg, 'To', emailTo)
 			msg = addheader(msg, 'Cc', emailCC)
 			msg = addheader(msg, 'Bcc', emailBCC)
 
-			toAddresses = emailTo.split(",") + emailCC.split(",") + emailBCC.split(",")
-
 			try:
 				if smtpProps['encryptionType'] == 'SSL':
-					connection = smtplib.SMTP_SSL(smtpProps['address'].encode('ascii', 'ignore'),
-					                              int(smtpProps['hostPort']))
+					connection = smtplib.SMTP_SSL(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
 					connection.ehlo()
 					connection.login(smtpProps["serverLogin"], smtpProps["serverPassword"])
-					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
+					connection.sendmail(emailFrom, toAddresses, msg.as_string())
 					connection.quit()
-					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
-					smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-					return True
 
 				elif smtpProps['encryptionType'] == 'StartTLS':
-					connection = smtplib.SMTP(smtpProps['address'].encode('ascii', 'ignore'),
-					                          int(smtpProps['hostPort']))
+					connection = smtplib.SMTP(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
 					connection.ehlo()
 					connection.starttls()
 					connection.ehlo()
 					connection.login(smtpProps["serverLogin"], smtpProps["serverPassword"])
-					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
+					connection.sendmail(emailFrom, toAddresses, msg.as_string())
 					connection.quit()
-					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
-					smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-					return True
 
 				elif smtpProps['encryptionType'] == 'None':
-					connection = smtplib.SMTP(smtpProps['address'].encode('ascii', 'ignore'),
-					                          int(smtpProps['hostPort']))
+					connection = smtplib.SMTP(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
 					connection.ehlo()
 					if (len(smtpProps["serverLogin"]) > 0) and (len(smtpProps["serverPassword"]) > 0):
 						connection.login(smtpProps["serverLogin"], smtpProps["serverPassword"])
-					connection.sendmail(smtpProps["fromAddress"], toAddresses, msg.as_string())
+					connection.sendmail(emailFrom, toAddresses, msg.as_string())
 					connection.quit()
-					smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
-					smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-					return True
 
 				else:
-					indigo.activePlugin.errorLog(u"Unknown encryption type: " + smtpProps['encryptionType'])
+					self.logger.error(u"Unknown encryption type: " + smtpProps['encryptionType'])
 					return False
 
 			except Exception, e:
-				indigo.activePlugin.errorLog(self.device.name + u": SMTP server connection error: " + str(e))
+				self.logger.exception(self.device.name + u": SMTP server connection error: " + str(e))
 				smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
 				smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 				return False
+				
+			else:
+			
+				smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
+				smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+				broadcastDict = {'messageFrom': emailFrom, 'messageTo': toAddresses, 'messageSubject': emailSubject, 'messageText': emailMessage}
+				indigo.server.broadcastToSubscribers(u"messageSent", broadcastDict)
+
+				return True
+
 
 		def pollCheck(self):
 			counter = int(self.device.pluginProps['pollingFrequency'])
@@ -477,7 +495,7 @@ class Plugin(indigo.PluginBase):
 				return False
 
 		def poll(self):
-			indigo.activePlugin.debugLog(
+			self.logger.debug(
 				self.device.name + u": SMTP poll, " + str(self.smtpQ.qsize()) + u" items in queue")
 			while not self.smtpQ.empty():
 				action = self.smtpQ.get(False)
@@ -490,14 +508,16 @@ class Plugin(indigo.PluginBase):
 	########################################
 	def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
+		pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s', datefmt='%Y-%m-%d %H:%M:%S')
+		self.plugin_file_handler.setFormatter(pfmt)
 		self.debug = pluginPrefs.get(u"showDebugInfo", False)
-		self.debugLog(u"Debugging enabled")
+		self.logger.debug(u"Debugging enabled")
 
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
 
 	def startup(self):
-		indigo.server.log(u"Starting Better Email")
+		self.logger.info(u"Starting Better Email")
 
 		self.updater = GitHubPluginUpdater(self)
 		self.updater.checkForUpdate()
@@ -509,17 +529,17 @@ class Plugin(indigo.PluginBase):
 		self.triggers = {}
 
 	def shutdown(self):
-		indigo.server.log(u"Shutting down Better Email")
+		self.logger.info(u"Shutting down Better Email")
 
 	####################
 
 	def getDeviceConfigUiValues(self, pluginProps, typeId, devId):
-		self.debugLog("getDeviceConfigUiValues, typeID = " + typeId)
+		self.logger.debug("getDeviceConfigUiValues, typeID = " + typeId)
 		valuesDict = indigo.Dict(pluginProps)
 		errorsDict = indigo.Dict()
 
 		if len(valuesDict) == 0:
-			self.debugLog("getDeviceConfigUiValues: no values, populating encryptionType and hostPort")
+			self.logger.debug("getDeviceConfigUiValues: no values, populating encryptionType and hostPort")
 			if typeId == "imapAccount":
 				valuesDict["encryptionType"] = "SSL"
 				valuesDict["hostPort"] = "993"
@@ -530,7 +550,7 @@ class Plugin(indigo.PluginBase):
 				valuesDict["encryptionType"] = "SSL"
 				valuesDict["hostPort"] = "465"
 		else:
-			self.debugLog("getDeviceConfigUiValues: no change, already populated")
+			self.logger.debug("getDeviceConfigUiValues: no change, already populated")
 
 		return (valuesDict, errorsDict)
 
@@ -568,55 +588,55 @@ class Plugin(indigo.PluginBase):
 	####################
 
 	def triggerStartProcessing(self, trigger):
-		self.debugLog("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
+		self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
 		assert trigger.id not in self.triggers
 		self.triggers[trigger.id] = trigger
 
 	def triggerStopProcessing(self, trigger):
-		self.debugLog("Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+		self.logger.debug("Removing Trigger %s (%d)" % (trigger.name, trigger.id))
 		assert trigger.id in self.triggers
 		del self.triggers[trigger.id]
 
 	def triggerCheck(self, device):
-		self.debugLog("Checking Triggers for Device %s (%d)" % (device.name, device.id))
+		self.logger.debug("Checking Triggers for Device %s (%d)" % (device.name, device.id))
 
 		for triggerId, trigger in sorted(self.triggers.iteritems()):
-			self.debugLog("\tChecking Trigger %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+			self.logger.debug("\tChecking Trigger %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
 			if trigger.pluginProps["serverID"] != str(device.id):
-				self.debugLog("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
+				self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
 			else:
 				if trigger.pluginTypeId == "regexMatch":
 					field = trigger.pluginProps["fieldPopUp"]
 					pattern = trigger.pluginProps["regexPattern"]
-					self.debugLog("\tChecking Device State %s for Pattern: %s" % (field, pattern))
+					self.logger.debug("\tChecking Device State %s for Pattern: %s" % (field, pattern))
 					cPattern = re.compile(pattern)
 					match = cPattern.search(device.states[field])
 					if match:
 						regexMatch = match.group()
-						self.debugLog("\tExecuting Trigger %s (%d), match: %s" % (trigger.name, trigger.id, regexMatch))
+						self.logger.debug("\tExecuting Trigger %s (%d), match: %s" % (trigger.name, trigger.id, regexMatch))
 						device.updateStateOnServer(key="regexMatch", value=regexMatch)
 						indigo.trigger.execute(trigger)
 					else:
-						self.debugLog("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+						self.logger.debug("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
 				elif trigger.pluginTypeId == "stringMatch":
 					field = trigger.pluginProps["fieldPopUp"]
 					pattern = trigger.pluginProps["stringPattern"]
-					self.debugLog("\tChecking Device State %s for string: %s" % (field, pattern))
+					self.logger.debug("\tChecking Device State %s for string: %s" % (field, pattern))
 					if device.states[field] == pattern:
-						self.debugLog("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+						self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
 						indigo.trigger.execute(trigger)
 					else:
-						self.debugLog("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+						self.logger.debug("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
 				else:
-					self.debugLog(
+					self.logger.debug(
 						"\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
 				# pattern matching here
 
 	####################
 	def validatePrefsConfigUi(self, valuesDict):
-		self.debugLog(u"validatePrefsConfigUi called")
+		self.logger.debug(u"validatePrefsConfigUi called")
 		errorsDict = indigo.Dict()
 		updateFrequency = valuesDict['updateFrequency']
 		if len(updateFrequency) == 0 or int(updateFrequency) < 0 or int(updateFrequency) > 168:
@@ -632,9 +652,9 @@ class Plugin(indigo.PluginBase):
 			self.debug = valuesDict.get("showDebugInfo", False)
 			self.updateFrequency = valuesDict.get("updateFrequency", 24)
 			if self.debug:
-				self.debugLog(u"Debug logging enabled")
+				self.logger.debug(u"Debug logging enabled")
 			else:
-				self.debugLog(u"Debug logging disabled")
+				self.logger.debug(u"Debug logging disabled")
 
 	########################################
 	# Called for each enabled Device belonging to plugin
@@ -643,10 +663,10 @@ class Plugin(indigo.PluginBase):
 	def deviceStartComm(self, device):
 
 		instanceVers = int(device.pluginProps.get('devVersCount', 0))
-		self.debugLog(device.name + u": Device Current Version = " + str(instanceVers))
+		self.logger.debug(device.name + u": Device Current Version = " + str(instanceVers))
 
 		if instanceVers >= kCurDevVersCount:
-			self.debugLog(device.name + u": Device Version is up to date")
+			self.logger.debug(device.name + u": Device Version is up to date")
 
 		elif instanceVers < kCurDevVersCount:
 			newProps = device.pluginProps
@@ -658,33 +678,33 @@ class Plugin(indigo.PluginBase):
 					newProps["encryptionType"] = "SSL"
 				else:
 					newProps["encryptionType"] = "None"
-				self.debugLog(device.name + u": created encryptionType property")
+				self.logger.debug(device.name + u": created encryptionType property")
 
 			if device.deviceTypeId == "imapAccount":
 				useIDLE = device.pluginProps.get('useIDLE', "unknown")
 				if useIDLE == "unknown":
 					newProps["useIDLE"] = "True"
-					self.debugLog(device.name + u": created useIDLE property")
+					self.logger.debug(device.name + u": created useIDLE property")
 
 			pollingFrequency = device.pluginProps.get('pollingFrequency', "unknown")
 			if pollingFrequency == "unknown":
 				newProps["pollingFrequency"] = device.pluginProps.get('pollingFrequency', 15)
-				self.debugLog(device.name + u": created pollingFrequency property")
+				self.logger.debug(device.name + u": created pollingFrequency property")
 
 			newProps["devVersCount"] = kCurDevVersCount
 			device.replacePluginPropsOnServer(newProps)
-			self.debugLog(u"Updated " + device.name + " to version " + str(kCurDevVersCount))
+			self.logger.debug(u"Updated " + device.name + " to version " + str(kCurDevVersCount))
 
 		else:
-			self.errorLog(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)
+			self.logger.error(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)
 
 		if len(device.pluginProps) < 3:
-			self.errorLog(u"Server \"%s\" is misconfigured - disabling" % device.name)
+			self.logger.error(u"Server \"%s\" is misconfigured - disabling" % device.name)
 			indigo.device.enable(device, value=False)
 
 		else:
 			if device.id not in self.serverDict:
-				self.debugLog(u"Starting server: " + device.name)
+				self.logger.debug(u"Starting server: " + device.name)
 				if device.deviceTypeId == "imapAccount":
 					self.serverDict[device.id] = self.IMAPServer(device)
 				elif device.deviceTypeId == "popAccount":
@@ -692,9 +712,9 @@ class Plugin(indigo.PluginBase):
 				elif device.deviceTypeId == "smtpAccount":
 					self.serverDict[device.id] = self.SMTPServer(device)
 				else:
-					self.errorLog(u"Unknown server device type: " + str(device.deviceTypeId))
+					self.logger.error(u"Unknown server device type: " + str(device.deviceTypeId))
 			else:
-				self.debugLog(u"Duplicate Device ID: " + device.name)
+				self.logger.debug(u"Duplicate Device ID: " + device.name)
 
 	########################################
 	# Terminate communication with servers
@@ -703,18 +723,13 @@ class Plugin(indigo.PluginBase):
 		props = device.pluginProps
 
 		if device.id in self.serverDict:
-			self.debugLog(u"Stopping server: " + device.name)
+			self.logger.debug(u"Stopping server: " + device.name)
 			del self.serverDict[device.id]
 		else:
-			self.debugLog(u"Unknown Device ID: " + device.name)
+			self.logger.debug(u"Unknown Device ID: " + device.name)
 
 	########################################
-	# If runConcurrentThread() is defined, then a new thread is automatically created
-	# and runConcurrentThread() is called in that thread after startup() has been called.
-	#
-	# runConcurrentThread() should loop forever and only return after self.stopThread
-	# becomes True. If this function returns prematurely then the plugin host process
-	# will log an error and attempt to call runConcurrentThread() again after several seconds.
+
 	def runConcurrentThread(self):
 
 		try:
@@ -728,7 +743,7 @@ class Plugin(indigo.PluginBase):
 						try:
 							self.updater.checkForUpdate()
 						except:
-							self.errorLog(u"Error in GHPU checkForUpdate")
+							self.logger.exception(u"Error in GHPU checkForUpdate")
 						self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
 
 				# now see if any email server devices need to poll
@@ -745,7 +760,7 @@ class Plugin(indigo.PluginBase):
 
 	########################################
 	def validateDeviceConfigUi(self, valuesDict, typeId, devId):
-		self.debugLog(u"validateDeviceConfigUi called")
+		self.logger.debug(u"validateDeviceConfigUi called")
 		errorsDict = indigo.Dict()
 
 		try:
@@ -761,20 +776,6 @@ class Plugin(indigo.PluginBase):
 				raise
 		except:
 			errorsDict['hostPort'] = u"Enter server port"
-
-		# try:
-		#			serverLogin = valuesDict['serverLogin']
-		#			if len(serverLogin) < 1:
-		#				raise
-		#		except:
-		#			errorsDict['serverLogin'] = u"Enter login name"
-
-		#		try:
-		#			serverPassword = valuesDict['serverPassword']
-		#			if len(serverPassword) < 1:
-		#				raise
-		#		except:
-		#			errorsDict['serverPassword'] = u"Enter login password"
 
 		try:
 			poll = int(valuesDict['pollingFrequency'])
@@ -799,7 +800,7 @@ class Plugin(indigo.PluginBase):
 	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
 	######################
 	def sendEmailAction(self, pluginAction):
-		self.debugLog(u"sendEmailAction queueing message '" + indigo.activePlugin.substitute(
+		self.logger.debug(u"sendEmailAction queueing message '" + indigo.activePlugin.substitute(
 			pluginAction.props["emailSubject"]) + "'")
 		smtpDevice = indigo.devices[pluginAction.deviceId]
 		smtpServer = self.serverDict[smtpDevice.id]
@@ -808,25 +809,25 @@ class Plugin(indigo.PluginBase):
 
 	########################################
 	def clearAllSMTPQueues(self):
-		self.debugLog(u"Clearing all SMTP Queues")
+		self.logger.debug(u"Clearing all SMTP Queues")
 		for serverId, server in self.serverDict.items():
 			if server.device.deviceTypeId == "smtpAccount":
 				server.smtpQ = Queue()  # just nuke the old queue and replace it
 
 	def clearSMTPQueue(self, device):
-		self.debugLog(u"Clearing SMTP Queue for " + self.serverDict[device.deviceId].device.name)
+		self.logger.debug(u"Clearing SMTP Queue for " + self.serverDict[device.deviceId].device.name)
 		self.serverDict[device.deviceId].smtpQ = Queue()  # just nuke the old queue and replace it
 
 	########################################
 	def pollAllServers(self):
-		self.debugLog(u"Polling All Email Servers")
+		self.logger.debug(u"Polling All Email Servers")
 		for serverId, server in self.serverDict.items():
-			self.debugLog(u"Polling serverId: " + str(
+			self.logger.debug(u"Polling serverId: " + str(
 				serverId) + ", serverTypeId: " + server.device.deviceTypeId + "(" + server.device.name + ")")
 			server.poll()
 
 	def pollServer(self, device):
-		self.debugLog(u"Polling Server: " + self.serverDict[device.deviceId].device.name)
+		self.logger.debug(u"Polling Server: " + self.serverDict[device.deviceId].device.name)
 		self.serverDict[device.deviceId].poll()
 
 	########################################
@@ -844,10 +845,10 @@ class Plugin(indigo.PluginBase):
 
 	def toggleDebugging(self):
 		if self.debug:
-			self.debugLog(u"Turning off debug logging")
+			self.logger.debug(u"Turning off debug logging")
 			self.pluginPrefs["showDebugInfo"] = False
 		else:
-			self.debugLog(u"Turning on debug logging")
+			self.logger.debug(u"Turning on debug logging")
 			self.pluginPrefs["showDebugInfo"] = True
 		self.debug = not self.debug
 
@@ -855,7 +856,7 @@ class Plugin(indigo.PluginBase):
 		deviceId = int(valuesDict["targetDevice"])
 		for serverId, server in self.serverDict.items():
 			if serverId == deviceId:
-				self.debugLog(u"Clearing SMTP Queue for " + server.device.name)
+				self.logger.debug(u"Clearing SMTP Queue for " + server.device.name)
 				server.smtpQ = Queue()  # just nuke the old queue and replace it
 		return True
 

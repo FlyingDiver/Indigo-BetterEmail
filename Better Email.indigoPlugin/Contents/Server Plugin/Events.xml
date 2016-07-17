@@ -30,7 +30,7 @@
 		<ConfigUI>
         	<Field id="serverID" type="menu">
             	<Label>Select Device:</Label>
-            	<List class="self" filter="" method="pickInboundServer" />
+            	<List class="self" filter="" method="pickInboundServer"  dynamicReload="true"/>
 			</Field>			
 			<Field type="menu" id="fieldPopUp" defaultValue="messageBody">
 				<Label>Match in:</Label>
