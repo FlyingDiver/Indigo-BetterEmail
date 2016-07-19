@@ -15,8 +15,14 @@
 		<Label>Email Update Notifications:</Label>
 	</Field>
 	<Field id="sep2" type="separator"/>
-	<Field id="showDebugInfo" type="checkbox">
-		<Label>Enable debugging:</Label>
-		<Description>(not recommended)</Description>
-	</Field>
+	<Field id="logLevel" type="menu" defaultValue="20">
+		<Label>Event Logging Level:</Label>
+		<List>
+			<Option value="10">Debugging Messages</Option>
+			<Option value="20">Informational Messages</Option>
+			<Option value="30">Warning Messages</Option>
+			<Option value="40">Error Messages</Option>
+			<Option value="50">Critical Errors Only</Option>
+		</List>
+	</Field>			
 </PluginConfig>

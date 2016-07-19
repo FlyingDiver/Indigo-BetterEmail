@@ -10,8 +10,11 @@ import poplib
 import imaplib2
 import time
 import logging
+from os.path import basename
 
 from email.Parser import Parser, FeedParser
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import Charset
 from email.header import Header, decode_header
@@ -379,17 +382,15 @@ class Plugin(indigo.PluginBase):
 
 		def smtpSend(self, pluginAction):
 
-			def nonascii(str):
-				return not all(ord(c) < 128 for c in str)
+			# Override python's weird assumption that utf-8 text should be encoded with
+			# base64, and instead use quoted-printable. 
+			Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
 
 			def addheader(message, headername, headervalue):
 				if len(headervalue) == 0:
 					return message
-				if nonascii(headervalue):
-					h = Header(headervalue, 'utf-8')
-					message[headername] = h
-				else:
-					message[headername] = headervalue
+					
+				message[headername] = Header(headervalue, 'utf-8')
 				return message
 
 			self.logger.debug(u"Sending to SMTP Server: " + self.device.name)
@@ -418,14 +419,20 @@ class Plugin(indigo.PluginBase):
 			emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
 			emailBCC = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
 
-			# Override python's weird assumption that utf-8 text should be encoded with
-			# base64, and instead use quoted-printable. 
-			Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
-
-			if (nonascii(emailMessage)):
+			attach = pluginAction.props.get("emailAttachments", "")
+			if len(attach) == 0:				
 				msg = MIMEText(emailMessage, 'plain', 'utf-8')
-			else:
-				msg = MIMEText(emailMessage, 'plain')
+			else:				
+				msg = MIMEMultipart()
+				msg.attach(MIMEText(emailMessage, 'plain', 'utf-8'))
+
+				files = indigo.activePlugin.substitute(attach)
+				fileList = files.split(",")
+				for f in fileList:
+					with open(f, "rb") as fil:
+						part = MIMEApplication(fil.read(), Name=basename(f))
+						part['Content-Disposition'] = 'attachment; filename="%s"' % basename(f)
+						msg.attach(part)
 
 			toAddresses = emailTo.split(",") + emailCC.split(",") + emailBCC.split(",")
 			emailFrom = smtpProps["fromAddress"]
@@ -495,8 +502,7 @@ class Plugin(indigo.PluginBase):
 				return False
 
 		def poll(self):
-			self.logger.debug(
-				self.device.name + u": SMTP poll, " + str(self.smtpQ.qsize()) + u" items in queue")
+			self.logger.debug(self.device.name + u": SMTP poll, " + str(self.smtpQ.qsize()) + u" items in queue")
 			while not self.smtpQ.empty():
 				action = self.smtpQ.get(False)
 				if not self.smtpSend(action):
@@ -510,8 +516,13 @@ class Plugin(indigo.PluginBase):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 		pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s', datefmt='%Y-%m-%d %H:%M:%S')
 		self.plugin_file_handler.setFormatter(pfmt)
-		self.debug = pluginPrefs.get(u"showDebugInfo", False)
-		self.logger.debug(u"Debugging enabled")
+
+		try:
+			self.logLevel = int(self.pluginPrefs[u"logLevel"])
+		except:
+			self.logLevel = logging.INFO
+		self.indigo_log_handler.setLevel(self.logLevel)
+		self.logger.debug(u"logLevel = " + str(self.logLevel))
 
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
@@ -521,9 +532,9 @@ class Plugin(indigo.PluginBase):
 
 		self.updater = GitHubPluginUpdater(self)
 		self.updater.checkForUpdate()
-		self.updateFrequency = self.pluginPrefs.get('updateFrequency', 24)
-		if float(self.updateFrequency) > 0.0:
-			self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
+		self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
+		self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
+		self.next_update_check = time.time()
 
 		self.serverDict = dict()  # IMAP/POP servers to poll
 		self.triggers = {}
@@ -649,12 +660,16 @@ class Plugin(indigo.PluginBase):
 	########################################
 	def closedPrefsConfigUi(self, valuesDict, userCancelled):
 		if not userCancelled:
-			self.debug = valuesDict.get("showDebugInfo", False)
-			self.updateFrequency = valuesDict.get("updateFrequency", 24)
-			if self.debug:
-				self.logger.debug(u"Debug logging enabled")
-			else:
-				self.logger.debug(u"Debug logging disabled")
+			try:
+				self.logLevel = int(valuesDict[u"logLevel"])
+			except:
+				self.logLevel = logging.INFO
+			self.indigo_log_handler.setLevel(self.logLevel)
+			self.logger.debug(u"logLevel = " + str(self.logLevel))
+
+			self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
+			self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
+			self.next_update_check = time.time()
 
 	########################################
 	# Called for each enabled Device belonging to plugin
@@ -734,19 +749,10 @@ class Plugin(indigo.PluginBase):
 
 		try:
 			while True:
-				indigo.debugger()
 
-				# Plugin Update check
-
-				if float(self.updateFrequency) > 0.0:
-					if time.time() > self.next_update_check:
-						try:
-							self.updater.checkForUpdate()
-						except:
-							self.logger.exception(u"Error in GHPU checkForUpdate")
-						self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
-
-				# now see if any email server devices need to poll
+				if (self.updateFrequency > 0.0) and (time.time() > self.next_update_check):
+					self.next_update_check = time.time() + self.updateFrequency
+					self.updater.checkForUpdate()
 
 				for serverId, server in self.serverDict.items():
 					if server.pollCheck():
@@ -799,10 +805,8 @@ class Plugin(indigo.PluginBase):
 	########################################
 	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
 	######################
-	def sendEmailAction(self, pluginAction):
-		self.logger.debug(u"sendEmailAction queueing message '" + indigo.activePlugin.substitute(
-			pluginAction.props["emailSubject"]) + "'")
-		smtpDevice = indigo.devices[pluginAction.deviceId]
+	def sendEmailAction(self, pluginAction, smtpDevice):
+		self.logger.debug(u"sendEmailAction queueing message '" + indigo.activePlugin.substitute(pluginAction.props["emailSubject"]) + "'")
 		smtpServer = self.serverDict[smtpDevice.id]
 		smtpServer.smtpQ.put(pluginAction)
 		smtpServer.poll()

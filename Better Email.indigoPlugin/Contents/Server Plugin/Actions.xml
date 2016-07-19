@@ -21,6 +21,9 @@
 			<Field id="emailMessage" type="textfield">
 				<Label>Message:</Label>
 			</Field>
+			<Field id="emailAttachments" type="textfield">
+				<Label>Attachments (comma separated):</Label>
+			</Field>
 			<Field id="simpleSeparator2" type="separator"/>
 			<Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Variable and Device State Substitution is enabled for all fields. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
