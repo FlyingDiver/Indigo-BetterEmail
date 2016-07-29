@@ -1,39 +1,39 @@
 <?xml version="1.0"?>
 <!-- If your plugin wants to add menu items to it's submenu off the new Extensions menu,
-	 define them here. Each should have a unique menu id, a Name, and an Action. The last
-	 is a method name in your python file that will be called when the user selects that
-	 menu item. Note - nothing will be returned to the client, so if you need to communicate
-	 back to the user you can post information into the Event Log.
+     define them here. Each should have a unique menu id, a Name, and an Action. The last
+     is a method name in your python file that will be called when the user selects that
+     menu item. Note - nothing will be returned to the client, so if you need to communicate
+     back to the user you can post information into the Event Log.
 -->
 <MenuItems>
-	<MenuItem id="menu1">
-		<Name>Check for new Email</Name>
+    <MenuItem id="menu1">
+        <Name>Check for new Email</Name>
         <CallbackMethod>pollAllServers</CallbackMethod>
-	</MenuItem>
-	<MenuItem id="menu2">
-		<Name>Clear All Email Queues</Name>
+    </MenuItem>
+    <MenuItem id="menu2">
+        <Name>Clear All Email Queues</Name>
         <CallbackMethod>clearAllSMTPQueues</CallbackMethod>
-	</MenuItem>
+    </MenuItem>
 
-	<MenuItem id="menu3">
-   		<Name>Clear Email Queue (Select Device)</Name>
-      	<CallbackMethod>clearSMTPQueueMenu</CallbackMethod>
-      	<ButtonTitle>Clear Queue</ButtonTitle>
-      	<ConfigUI>
-        	<Field id="targetDevice" type="menu">
-            	<Label>Select SMTP Queue to clear:</Label>
-            	<List class="self" filter="" method="pickSMTPServer" dynamicReload="true"/>
-         	</Field>
-		</ConfigUI>
-	</MenuItem>
-	<MenuItem id="titleSeparator2" type="separator" />
+    <MenuItem id="menu3">
+        <Name>Clear Email Queue (Select Device)</Name>
+        <CallbackMethod>clearSMTPQueueMenu</CallbackMethod>
+        <ButtonTitle>Clear Queue</ButtonTitle>
+        <ConfigUI>
+            <Field id="targetDevice" type="menu">
+                <Label>Select SMTP Queue to clear:</Label>
+                <List class="self" filter="" method="pickSMTPServer" dynamicReload="true"/>
+            </Field>
+        </ConfigUI>
+    </MenuItem>
+    <MenuItem id="titleSeparator2" type="separator" />
     <MenuItem id="checkForUpdates">
-    	<Name>Check for Updates</Name>
-    	<CallbackMethod>checkForUpdates</CallbackMethod>
+        <Name>Check for Updates</Name>
+        <CallbackMethod>checkForUpdates</CallbackMethod>
     </MenuItem>
     <MenuItem id="updatePlugin">
-    	<Name>Update Plugin</Name>
-    	<CallbackMethod>updatePlugin</CallbackMethod>
+        <Name>Update Plugin</Name>
+        <CallbackMethod>updatePlugin</CallbackMethod>
     </MenuItem>
     <MenuItem id="forceUpdate">
         <Name>Force Update</Name>

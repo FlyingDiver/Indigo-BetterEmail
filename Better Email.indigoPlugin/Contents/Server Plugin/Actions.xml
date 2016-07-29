@@ -1,49 +1,49 @@
 <?xml version="1.0"?>
 <Actions>
-	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
-	<Action id="sendEmail" deviceFilter="self.smtpAccount">
-		<Name>Send Email</Name>
-		<CallbackMethod>sendEmailAction</CallbackMethod>
-		<ConfigUI>
-			<Field id="emailTo" type="textfield">
-				<Label>Email To:</Label>
-			</Field>
-			<Field id="emailCC" type="textfield">
-				<Label>Email CC:</Label>
-			</Field>
-			<Field id="emailBCC" type="textfield">
-				<Label>Email BCC:</Label>
-			</Field>
-			<Field id="simpleSeparator1" type="separator"/>
-			<Field id="emailSubject" type="textfield">
-				<Label>Subject:</Label>
-			</Field>
-			<Field id="emailMessage" type="textfield">
-				<Label>Message:</Label>
-			</Field>
-			<Field id="emailAttachments" type="textfield">
-				<Label>Attachments (comma separated):</Label>
-			</Field>
-			<Field id="simpleSeparator2" type="separator"/>
-			<Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
-				<Label>Variable and Device State Substitution is enabled for all fields. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
-			</Field>
-		</ConfigUI>
-	</Action>
-	<Action id="pollAllServers">
-		<Name>Poll All Servers</Name>
+    <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
+    <Action id="sendEmail" deviceFilter="self.smtpAccount">
+        <Name>Send Email</Name>
+        <CallbackMethod>sendEmailAction</CallbackMethod>
+        <ConfigUI>
+            <Field id="emailTo" type="textfield">
+                <Label>Email To:</Label>
+            </Field>
+            <Field id="emailCC" type="textfield">
+                <Label>Email CC:</Label>
+            </Field>
+            <Field id="emailBCC" type="textfield">
+                <Label>Email BCC:</Label>
+            </Field>
+            <Field id="simpleSeparator1" type="separator"/>
+            <Field id="emailSubject" type="textfield">
+                <Label>Subject:</Label>
+            </Field>
+            <Field id="emailMessage" type="textfield">
+                <Label>Message:</Label>
+            </Field>
+            <Field id="emailAttachments" type="textfield">
+                <Label>Attachments (comma separated):</Label>
+            </Field>
+            <Field id="simpleSeparator2" type="separator"/>
+            <Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Variable and Device State Substitution is enabled for all fields. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+            </Field>
+        </ConfigUI>
+    </Action>
+    <Action id="pollAllServers">
+        <Name>Poll All Servers</Name>
         <CallbackMethod>pollAllServers</CallbackMethod>
-	</Action>
-	<Action id="pollServer" deviceFilter="self">
-		<Name>Poll A Server</Name>
+    </Action>
+    <Action id="pollServer" deviceFilter="self">
+        <Name>Poll A Server</Name>
         <CallbackMethod>pollServer</CallbackMethod>
-	</Action>
-	<Action id="clearAllSMTPQueues">
-		<Name>Clear All Email Queues</Name>
+    </Action>
+    <Action id="clearAllSMTPQueues">
+        <Name>Clear All Email Queues</Name>
         <CallbackMethod>clearAllSMTPQueues</CallbackMethod>
-	</Action>
-	<Action id="clearSMTPQueue"  deviceFilter="self.smtpAccount">
-		<Name>Clear Email Queue</Name>
+    </Action>
+    <Action id="clearSMTPQueue"  deviceFilter="self.smtpAccount">
+        <Name>Clear Email Queue</Name>
         <CallbackMethod>clearSMTPQueue</CallbackMethod>
-	</Action>
+    </Action>
 </Actions>

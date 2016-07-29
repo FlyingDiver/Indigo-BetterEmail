@@ -1,199 +1,199 @@
 <?xml version="1.0"?>
 <Devices>
-	<Device type="custom" id="imapAccount">
-		<Name>IMAP Server</Name>
-		<ConfigUI>
-			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
-			<Field id="address" type="textfield">
-				<Label>IMAP Server Name:</Label>
-			</Field>
-			<Field type="menu" id="encryptionType" filter="">
-				<Label>Encryption:</Label>
-				<List method="listEncryptionTypes" class="self" filter="imapAccount" />
-				<CallbackMethod>encryptionSelected</CallbackMethod>
-			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="">
-				<Label>Server Port:</Label>
-			</Field>
-			<Field id="serverLogin" type="textfield">
-				<Label>Login:</Label>
-			</Field>
-			<Field id="serverPassword" type="textfield" secure="true">
-				<Label>Password:</Label>
-			</Field>
-			<Field id="useIDLE" type="checkbox" defaultValue="true">
-				<Label>Use IDLE</Label>
-				<Description>Check if your IMAP server supports IDLE.</Description>
-			</Field>
-			<Field id="idleNote" type="label" fontSize="small" fontColor="darkgray">
-				<Label>IMAP servers that support IDLE do not need to be polled. The plugin will maintain a connection to the server and received emails will be processed immediately.</Label>
-			</Field>
-			<Field id="pollingFrequency" type="textfield" defaultValue="15" enabledBindingId="useIDLE" enabledBindingNegate="true" visibleBindingId="useIDLE" visibleBindingValue="false">
-				<Label>Poll IMAP Server Every (minutes):</Label>
-			</Field>
-			<Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray"  visibleBindingId="useIDLE" visibleBindingValue="false">
-				<Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
-			</Field>
-			<Field id="sep2" type="separator"/>
-			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
-				<Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
-			</Field>
-			<Field id="delete" type="checkbox" defaultValue="true">
-				<Label>Delete:</Label>
-				<Description>Delete the email message after processing.</Description>
-			</Field>
-		</ConfigUI>
-		<States>
-			<State id="lastMessage">
-				<ValueType>Integer</ValueType>
-				<TriggerLabel>Last Message</TriggerLabel>
-				<ControlPageLabel>Last Message</ControlPageLabel>
-			</State>
-			<State id="messageSubject">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Message Subject</TriggerLabel>
-				<ControlPageLabel>Message Subject</ControlPageLabel>
-			</State>
-			<State id="messageText">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Message Text</TriggerLabel>
-				<ControlPageLabel>Message Text</ControlPageLabel>
-			</State>
-			<State id="messageFrom">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Message From</TriggerLabel>
-				<ControlPageLabel>Message From</ControlPageLabel>
-			</State>
-			<State id="regexMatch">
-				<ValueType>String</ValueType>
-				<TriggerLabel>RegEx Match Result</TriggerLabel>
-				<ControlPageLabel>>RegEx Match Result</ControlPageLabel>
-			</State>
-			<State id="serverStatus">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Server Connection Status</TriggerLabel>
-				<ControlPageLabel>Server Status</ControlPageLabel>
-			</State>
-		</States>
-		<UiDisplayStateId>serverStatus</UiDisplayStateId>
-	</Device>
-	<Device type="custom" id="popAccount">
-		<Name>POP Server</Name>
-		<ConfigUI>
-			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
-			<Field id="address" type="textfield">
-				<Label>POP Server Name:</Label>
-			</Field>
-			<Field type="menu" id="encryptionType" filter="">
-				<Label>Encryption:</Label>
-				<List method="listEncryptionTypes" class="self" filter="popAccount" />
-				<CallbackMethod>encryptionSelected</CallbackMethod>
-			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="995">
-				<Label>Server Port:</Label>
-			</Field>
-			<Field id="serverLogin" type="textfield">
-				<Label>Login:</Label>
-			</Field>
-			<Field id="serverPassword" type="textfield" secure="true">
-				<Label>Password:</Label>
-			</Field>
-			<Field id="pollingFrequency" type="textfield" defaultValue="15">
-				<Label>Poll POP Server Every (minutes):</Label>
-			</Field>
-			<Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray">
-				<Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
-			</Field>
-			<Field id="sep2" type="separator"/>
-			<Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
-				<Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
-			</Field>
-			<Field id="delete" type="checkbox" defaultValue="true">
-				<Label>Delete:</Label>
-				<Description>Delete the email message after processing.</Description>
-			</Field>
-		</ConfigUI>
-		<States>
-			<State id="lastMessage">
-				<ValueType>Integer</ValueType>
-				<TriggerLabel>Last Message</TriggerLabel>
-				<ControlPageLabel>Last Message</ControlPageLabel>
-			</State>
-			<State id="messageSubject">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Message Subject</TriggerLabel>
-				<ControlPageLabel>Message Subject</ControlPageLabel>
-			</State>
-			<State id="messageText">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Message Text</TriggerLabel>
-				<ControlPageLabel>Message Text</ControlPageLabel>
-			</State>
-			<State id="messageFrom">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Message From</TriggerLabel>
-				<ControlPageLabel>Message From</ControlPageLabel>
-			</State>
-			<State id="regexMatch">
-				<ValueType>String</ValueType>
-				<TriggerLabel>RegEx Match Result</TriggerLabel>
-				<ControlPageLabel>>RegEx Match Result</ControlPageLabel>
-			</State>
-			<State id="serverStatus">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Server Connection Status</TriggerLabel>
-				<ControlPageLabel>Server Status</ControlPageLabel>
-			</State>
-		</States>
-		<UiDisplayStateId>serverStatus</UiDisplayStateId>
-	</Device>
-	<Device type="custom" id="smtpAccount">
-		<Name>SMTP Server</Name>
-		<ConfigUI>
-			<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
-			<Field id="fromAddress" type="textfield">
-				<Label>From Address:</Label>
-			</Field>
-			<Field id="sep2" type="separator"/>
-			<Field id="address" type="textfield">
-				<Label>SMTP Server Name:</Label>
-			</Field>
-			<Field type="menu" id="encryptionType" filter="">
-				<Label>Encryption:</Label>
-				<List method="listEncryptionTypes" class="self" filter="smtpAccount" />
-				<CallbackMethod>encryptionSelected</CallbackMethod>
-			</Field>
-			<Field id="hostPort" type="textfield" defaultValue="465">
-				<Label>Server Port:</Label>
-			</Field>
-			<Field id="serverLogin" type="textfield">
-				<Label>Login:</Label>
-			</Field>
-			<Field id="serverPassword" type="textfield" secure="true">
-				<Label>Password:</Label>
-			</Field>
-			<Field id="pollingFrequency" type="textfield" defaultValue="15">
-				<Label>Connect to SMTP Server Every (minutes):</Label>
-			</Field>
-			<Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray">
-				<Label>BetterEmail attempts to resend pending email messages if the initial send fails.</Label>
-			</Field>
-			<Field id="pollingFrequencyNote2" type="label" fontSize="small" fontColor="darkgray">
-				<Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
-			</Field>
-		</ConfigUI>
-		<States>
-			<State id="messagesToSend">
-				<ValueType>Integer</ValueType>
-				<TriggerLabel>Messages in Queue to Send</TriggerLabel>
-				<ControlPageLabel>Messages to Send</ControlPageLabel>
-			</State>
-			<State id="serverStatus">
-				<ValueType>String</ValueType>
-				<TriggerLabel>Server Connection Status</TriggerLabel>
-				<ControlPageLabel>Server Status</ControlPageLabel>
-			</State>
-		</States>
-		<UiDisplayStateId>serverStatus</UiDisplayStateId>
-	</Device>
+    <Device type="custom" id="imapAccount">
+        <Name>IMAP Server</Name>
+        <ConfigUI>
+            <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
+            <Field id="address" type="textfield">
+                <Label>IMAP Server Name:</Label>
+            </Field>
+            <Field type="menu" id="encryptionType" filter="">
+                <Label>Encryption:</Label>
+                <List method="listEncryptionTypes" class="self" filter="imapAccount" />
+                <CallbackMethod>encryptionSelected</CallbackMethod>
+            </Field>
+            <Field id="hostPort" type="textfield" defaultValue="">
+                <Label>Server Port:</Label>
+            </Field>
+            <Field id="serverLogin" type="textfield">
+                <Label>Login:</Label>
+            </Field>
+            <Field id="serverPassword" type="textfield" secure="true">
+                <Label>Password:</Label>
+            </Field>
+            <Field id="useIDLE" type="checkbox" defaultValue="true">
+                <Label>Use IDLE</Label>
+                <Description>Check if your IMAP server supports IDLE.</Description>
+            </Field>
+            <Field id="idleNote" type="label" fontSize="small" fontColor="darkgray">
+                <Label>IMAP servers that support IDLE do not need to be polled. The plugin will maintain a connection to the server and received emails will be processed immediately.</Label>
+            </Field>
+            <Field id="pollingFrequency" type="textfield" defaultValue="15" enabledBindingId="useIDLE" enabledBindingNegate="true" visibleBindingId="useIDLE" visibleBindingValue="false">
+                <Label>Poll IMAP Server Every (minutes):</Label>
+            </Field>
+            <Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray"  visibleBindingId="useIDLE" visibleBindingValue="false">
+                <Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
+            </Field>
+            <Field id="sep2" type="separator"/>
+            <Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
+            </Field>
+            <Field id="delete" type="checkbox" defaultValue="true">
+                <Label>Delete:</Label>
+                <Description>Delete the email message after processing.</Description>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="lastMessage">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Last Message</TriggerLabel>
+                <ControlPageLabel>Last Message</ControlPageLabel>
+            </State>
+            <State id="messageSubject">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message Subject</TriggerLabel>
+                <ControlPageLabel>Message Subject</ControlPageLabel>
+            </State>
+            <State id="messageText">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message Text</TriggerLabel>
+                <ControlPageLabel>Message Text</ControlPageLabel>
+            </State>
+            <State id="messageFrom">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message From</TriggerLabel>
+                <ControlPageLabel>Message From</ControlPageLabel>
+            </State>
+            <State id="regexMatch">
+                <ValueType>String</ValueType>
+                <TriggerLabel>RegEx Match Result</TriggerLabel>
+                <ControlPageLabel>>RegEx Match Result</ControlPageLabel>
+            </State>
+            <State id="serverStatus">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Server Connection Status</TriggerLabel>
+                <ControlPageLabel>Server Status</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>serverStatus</UiDisplayStateId>
+    </Device>
+    <Device type="custom" id="popAccount">
+        <Name>POP Server</Name>
+        <ConfigUI>
+            <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
+            <Field id="address" type="textfield">
+                <Label>POP Server Name:</Label>
+            </Field>
+            <Field type="menu" id="encryptionType" filter="">
+                <Label>Encryption:</Label>
+                <List method="listEncryptionTypes" class="self" filter="popAccount" />
+                <CallbackMethod>encryptionSelected</CallbackMethod>
+            </Field>
+            <Field id="hostPort" type="textfield" defaultValue="995">
+                <Label>Server Port:</Label>
+            </Field>
+            <Field id="serverLogin" type="textfield">
+                <Label>Login:</Label>
+            </Field>
+            <Field id="serverPassword" type="textfield" secure="true">
+                <Label>Password:</Label>
+            </Field>
+            <Field id="pollingFrequency" type="textfield" defaultValue="15">
+                <Label>Poll POP Server Every (minutes):</Label>
+            </Field>
+            <Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray">
+                <Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
+            </Field>
+            <Field id="sep2" type="separator"/>
+            <Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
+            </Field>
+            <Field id="delete" type="checkbox" defaultValue="true">
+                <Label>Delete:</Label>
+                <Description>Delete the email message after processing.</Description>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="lastMessage">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Last Message</TriggerLabel>
+                <ControlPageLabel>Last Message</ControlPageLabel>
+            </State>
+            <State id="messageSubject">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message Subject</TriggerLabel>
+                <ControlPageLabel>Message Subject</ControlPageLabel>
+            </State>
+            <State id="messageText">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message Text</TriggerLabel>
+                <ControlPageLabel>Message Text</ControlPageLabel>
+            </State>
+            <State id="messageFrom">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message From</TriggerLabel>
+                <ControlPageLabel>Message From</ControlPageLabel>
+            </State>
+            <State id="regexMatch">
+                <ValueType>String</ValueType>
+                <TriggerLabel>RegEx Match Result</TriggerLabel>
+                <ControlPageLabel>>RegEx Match Result</ControlPageLabel>
+            </State>
+            <State id="serverStatus">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Server Connection Status</TriggerLabel>
+                <ControlPageLabel>Server Status</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>serverStatus</UiDisplayStateId>
+    </Device>
+    <Device type="custom" id="smtpAccount">
+        <Name>SMTP Server</Name>
+        <ConfigUI>
+            <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
+            <Field id="fromAddress" type="textfield">
+                <Label>From Address:</Label>
+            </Field>
+            <Field id="sep2" type="separator"/>
+            <Field id="address" type="textfield">
+                <Label>SMTP Server Name:</Label>
+            </Field>
+            <Field type="menu" id="encryptionType" filter="">
+                <Label>Encryption:</Label>
+                <List method="listEncryptionTypes" class="self" filter="smtpAccount" />
+                <CallbackMethod>encryptionSelected</CallbackMethod>
+            </Field>
+            <Field id="hostPort" type="textfield" defaultValue="465">
+                <Label>Server Port:</Label>
+            </Field>
+            <Field id="serverLogin" type="textfield">
+                <Label>Login:</Label>
+            </Field>
+            <Field id="serverPassword" type="textfield" secure="true">
+                <Label>Password:</Label>
+            </Field>
+            <Field id="pollingFrequency" type="textfield" defaultValue="15">
+                <Label>Connect to SMTP Server Every (minutes):</Label>
+            </Field>
+            <Field id="pollingFrequencyNote" type="label" fontSize="small" fontColor="darkgray">
+                <Label>BetterEmail attempts to resend pending email messages if the initial send fails.</Label>
+            </Field>
+            <Field id="pollingFrequencyNote2" type="label" fontSize="small" fontColor="darkgray">
+                <Label>The plugin will not poll if the frequency is set to zero.  Only enter zero if you want to set up your own polling schedule.</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="messagesToSend">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Messages in Queue to Send</TriggerLabel>
+                <ControlPageLabel>Messages to Send</ControlPageLabel>
+            </State>
+            <State id="serverStatus">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Server Connection Status</TriggerLabel>
+                <ControlPageLabel>Server Status</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>serverStatus</UiDisplayStateId>
+    </Device>
 </Devices>

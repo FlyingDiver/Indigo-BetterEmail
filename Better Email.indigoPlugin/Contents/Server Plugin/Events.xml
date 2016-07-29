@@ -1,50 +1,48 @@
 <?xml version="1.0"?>
 <Events>
-	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
+    <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
     <Event id="regexMatch">
         <Name>RegEx Pattern Match in Email</Name>
-		<ConfigUI>
-        	<Field id="serverID" type="menu">
-            	<Label>Select Device:</Label>
-            	<List class="self" filter="" method="pickInboundServer" dynamicReload="true"/>
-			</Field>			
-			<Field type="menu" id="fieldPopUp" defaultValue="messageBody">
-				<Label>Match in:</Label>
-				<List>
-					<Option value="messageText">Message Text</Option>
-					<Option value="messageSubject">Message Subject</Option>
-					<Option value="messageFrom">Message From</Option>
-				</List>
-			</Field>			
-			<Field id="regexPattern" type="textfield">
-				<Label>Regular Expression:</Label>
-			</Field>
-			<Field id="simpleSeparator2" type="separator"/>
-			<Field id="regexNote" type="label" fontSize="small" fontColor="darkgray">
-				<Label>For information on how to construct regular expressions, visit http://www.regular-expressions.info/tutorial.html</Label>
-			</Field>
-		</ConfigUI>
+        <ConfigUI>
+            <Field id="serverID" type="menu">
+                <Label>Select Device:</Label>
+                <List class="self" filter="" method="pickInboundServer" dynamicReload="true"/>
+            </Field>            
+            <Field type="menu" id="fieldPopUp" defaultValue="messageBody">
+                <Label>Match in:</Label>
+                <List>
+                    <Option value="messageText">Message Text</Option>
+                    <Option value="messageSubject">Message Subject</Option>
+                    <Option value="messageFrom">Message From</Option>
+                </List>
+            </Field>            
+            <Field id="regexPattern" type="textfield">
+                <Label>Regular Expression:</Label>
+            </Field>
+            <Field id="simpleSeparator2" type="separator"/>
+            <Field id="regexNote" type="label" fontSize="small" fontColor="darkgray">
+                <Label>For information on how to construct regular expressions, visit http://www.regular-expressions.info/tutorial.html</Label>
+            </Field>
+        </ConfigUI>
     </Event>
     <Event id="stringMatch">
         <Name>String Match in Email</Name>
-		<ConfigUI>
-        	<Field id="serverID" type="menu">
-            	<Label>Select Device:</Label>
-            	<List class="self" filter="" method="pickInboundServer"  dynamicReload="true"/>
-			</Field>			
-			<Field type="menu" id="fieldPopUp" defaultValue="messageBody">
-				<Label>Match in:</Label>
-				<List>
-					<Option value="messageText">Message Text</Option>
-					<Option value="messageSubject">Message Subject</Option>
-					<Option value="messageFrom">Message From</Option>
-				</List>
-			</Field>			
-			<Field id="stringPattern" type="textfield">
-				<Label>String to match:</Label>
-			</Field>
-		</ConfigUI>
+        <ConfigUI>
+            <Field id="serverID" type="menu">
+                <Label>Select Device:</Label>
+                <List class="self" filter="" method="pickInboundServer"  dynamicReload="true"/>
+            </Field>            
+            <Field type="menu" id="fieldPopUp" defaultValue="messageBody">
+                <Label>Match in:</Label>
+                <List>
+                    <Option value="messageText">Message Text</Option>
+                    <Option value="messageSubject">Message Subject</Option>
+                    <Option value="messageFrom">Message From</Option>
+                </List>
+            </Field>            
+            <Field id="stringPattern" type="textfield">
+                <Label>String to match:</Label>
+            </Field>
+        </ConfigUI>
     </Event>
 </Events>
-
-
