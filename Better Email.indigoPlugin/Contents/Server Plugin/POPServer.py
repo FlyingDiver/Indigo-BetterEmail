@@ -11,6 +11,8 @@ from email.Parser import FeedParser
 from email import Charset
 from email.header import decode_header
 
+from Queue import Queue
+
 import indigo
 
 # POP specific class and methods

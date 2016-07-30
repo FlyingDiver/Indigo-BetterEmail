@@ -26,3 +26,8 @@ This plugin provides enhances capabilities for sending and receiving email from 
 		'messageSubject': 	<text string>,
 		'messageText': 		<text string>
 	}
+
+### Indigo 7 Only
+
+
+This plugin only works under Indigo 7 or greater.

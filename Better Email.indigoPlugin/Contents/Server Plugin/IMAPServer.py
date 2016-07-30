@@ -11,6 +11,9 @@ from email.Parser import Parser
 from email import Charset
 from email.header import decode_header
 
+from Queue import Queue
+from threading import Thread, Event
+
 import indigo
 
 # IMAP specific class and methods

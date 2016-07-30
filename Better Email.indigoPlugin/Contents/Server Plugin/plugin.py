@@ -8,7 +8,6 @@ import time
 import logging
 
 from Queue import Queue
-from threading import Thread, Event
 
 from SMTPServer import SMTPServer
 from IMAPServer import IMAPServer
@@ -231,11 +230,11 @@ class Plugin(indigo.PluginBase):
             if device.id not in self.serverDict:
                 self.logger.debug(u"Starting server: " + device.name)
                 if device.deviceTypeId == "imapAccount":
-                    self.serverDict[device.id] = self.IMAPServer(device)
+                    self.serverDict[device.id] = IMAPServer(device)
                 elif device.deviceTypeId == "popAccount":
-                    self.serverDict[device.id] = self.POPServer(device)
+                    self.serverDict[device.id] = POPServer(device)
                 elif device.deviceTypeId == "smtpAccount":
-                    self.serverDict[device.id] = self.SMTPServer(device)
+                    self.serverDict[device.id] = SMTPServer(device)
                 else:
                     self.logger.error(u"Unknown server device type: " + str(device.deviceTypeId))
             else:
@@ -322,29 +321,6 @@ class Plugin(indigo.PluginBase):
         smtpServer.poll()
 
     ########################################
-    def clearAllSMTPQueues(self):
-        self.logger.debug(u"Clearing all SMTP Queues")
-        for serverId, server in self.serverDict.items():
-            if server.device.deviceTypeId == "smtpAccount":
-                server.smtpQ = Queue()  # just nuke the old queue and replace it
-
-    def clearSMTPQueue(self, device):
-        self.logger.debug(u"Clearing SMTP Queue for " + self.serverDict[device.deviceId].device.name)
-        self.serverDict[device.deviceId].smtpQ = Queue()  # just nuke the old queue and replace it
-
-    ########################################
-    def pollAllServers(self):
-        self.logger.debug(u"Polling All Email Servers")
-        for serverId, server in self.serverDict.items():
-            self.logger.debug(u"Polling serverId: " + str(
-                serverId) + ", serverTypeId: " + server.device.deviceTypeId + "(" + server.device.name + ")")
-            server.poll()
-
-    def pollServer(self, device):
-        self.logger.debug(u"Polling Server: " + self.serverDict[device.deviceId].device.name)
-        self.serverDict[device.deviceId].poll()
-
-    ########################################
     # Menu Methods
     ########################################
 
@@ -362,12 +338,33 @@ class Plugin(indigo.PluginBase):
         for serverId, server in self.serverDict.items():
             if serverId == deviceId:
                 self.logger.debug(u"Clearing SMTP Queue for " + server.device.name)
-                server.smtpQ = Queue()  # just nuke the old queue and replace it
+                server.clearQueue()
         return True
 
+    def clearAllSMTPQueues(self):
+        self.logger.debug(u"Clearing all SMTP Queues")
+        for serverId, server in self.serverDict.items():
+            if server.device.deviceTypeId == "smtpAccount":
+                self.logger.debug(u"\tClearing SMTP Queue for " + server.device.name)
+                server.clearQueue()
+
+    def clearSMTPQueue(self, device):
+        self.logger.debug(u"Clearing SMTP Queue for " + self.serverDict[device.deviceId].device.name)
+        self.serverDict[device.deviceId].clearQueue()
+
+    def pollAllServers(self):
+        self.logger.debug(u"Polling All Email Servers")
+        for serverId, server in self.serverDict.items():
+            self.logger.debug(u"Polling serverId: " + str(
+                serverId) + ", serverTypeId: " + server.device.deviceTypeId + "(" + server.device.name + ")")
+            server.poll()
+
+    def pollServer(self, device):
+        self.logger.debug(u"Polling Server: " + self.serverDict[device.deviceId].device.name)
+        self.serverDict[device.deviceId].poll()
     def pickSMTPServer(self, filter=None, valuesDict=None, typeId=0):
         retList = []
-        for dev in indigo.devices.iter(self):
+        for dev in indigo.devices.iter("self"):
             if dev.deviceTypeId == "smtpAccount":
                 retList.append((dev.id, dev.name))
         retList.sort(key=lambda tup: tup[1])
@@ -375,7 +372,7 @@ class Plugin(indigo.PluginBase):
 
     def pickInboundServer(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         retList = []
-        for dev in indigo.devices.iter(self):
+        for dev in indigo.devices.iter("self"):
             if (dev.deviceTypeId == "imapAccount") or (dev.deviceTypeId == "popAccount"):
                 retList.append((dev.id, dev.name))
         retList.sort(key=lambda tup: tup[1])

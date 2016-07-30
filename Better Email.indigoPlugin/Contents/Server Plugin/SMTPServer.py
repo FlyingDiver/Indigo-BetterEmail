@@ -14,6 +14,8 @@ from email.mime.text import MIMEText
 from email import Charset
 from email.header import Header
 
+from Queue import Queue
+
 import indigo
 
 def addheader(message, headername, headervalue):
@@ -34,6 +36,9 @@ class SMTPServer(object):
 
     def __str__(self):
         return self.status
+
+    def clearQueue(self):
+        self.smtpQ = Queue()  # just nuke the old queue and replace it
 
     def smtpSend(self, pluginAction):
 
