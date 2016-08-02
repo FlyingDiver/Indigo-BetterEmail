@@ -9,9 +9,9 @@
 	<key>IwsApiVersion</key>
 	<string>1.0.0</string>
 	<key>CFBundleName</key>
-	<string>Better Email</string>
+	<string>BetterEmail</string>
 	<key>CFBundleDisplayName</key>
-	<string>Better Email</string>
+	<string>BetterEmail</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.flyingdiver.indigoplugin.betteremail</string>
 	<key>CFBundleVersion</key>
