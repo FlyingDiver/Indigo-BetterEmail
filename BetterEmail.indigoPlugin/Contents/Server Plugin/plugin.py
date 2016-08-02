@@ -352,6 +352,14 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"Clearing SMTP Queue for " + self.serverDict[device.deviceId].device.name)
         self.serverDict[device.deviceId].clearQueue()
 
+    def pickSMTPServer(self, filter=None, valuesDict=None, typeId=0):
+        retList = []
+        for dev in indigo.devices.iter("self"):
+            if dev.deviceTypeId == "smtpAccount":
+                retList.append((dev.id, dev.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
+
     def pollAllServers(self):
         self.logger.debug(u"Polling All Email Servers")
         for serverId, server in self.serverDict.items():
@@ -362,13 +370,6 @@ class Plugin(indigo.PluginBase):
     def pollServer(self, device):
         self.logger.debug(u"Polling Server: " + self.serverDict[device.deviceId].device.name)
         self.serverDict[device.deviceId].poll()
-    def pickSMTPServer(self, filter=None, valuesDict=None, typeId=0):
-        retList = []
-        for dev in indigo.devices.iter("self"):
-            if dev.deviceTypeId == "smtpAccount":
-                retList.append((dev.id, dev.name))
-        retList.sort(key=lambda tup: tup[1])
-        return retList
 
     def pickInboundServer(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         retList = []

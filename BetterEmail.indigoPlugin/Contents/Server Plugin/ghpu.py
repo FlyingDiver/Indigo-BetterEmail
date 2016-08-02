@@ -321,4 +321,6 @@ class GitHubPluginUpdater(object):
 
 ################################################################################
 # maps the standard version string as a tuple for comparrison
-def ver(vstr): return tuple(map(int, (vstr.split('.'))))
+def ver(vstr):
+    return tuple(map(int, (vstr.split('.'))))
+
