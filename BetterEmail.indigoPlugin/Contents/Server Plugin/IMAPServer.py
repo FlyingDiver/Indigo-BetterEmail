@@ -81,6 +81,7 @@ class IMAPServer(object):
 
         while True:
             if self.event.isSet():
+                self.logger.debug(self.device.name + u": IDLE Thread Exiting")
                 return
             self.needsync = False
 

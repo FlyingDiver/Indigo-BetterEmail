@@ -40,7 +40,6 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"Starting Better Email")
 
         self.updater = GitHubPluginUpdater(self)
-        self.updater.checkForUpdate()
         self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
         self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
         self.next_update_check = time.time()
@@ -187,11 +186,8 @@ class Plugin(indigo.PluginBase):
     def deviceStartComm(self, device):
 
         instanceVers = int(device.pluginProps.get('devVersCount', 0))
-        self.logger.debug(device.name + u": Device Current Version = " + str(instanceVers))
-
         if instanceVers >= kCurDevVersCount:
             self.logger.debug(device.name + u": Device Version is up to date")
-
         elif instanceVers < kCurDevVersCount:
             newProps = device.pluginProps
 
@@ -244,8 +240,6 @@ class Plugin(indigo.PluginBase):
     # Terminate communication with servers
     #
     def deviceStopComm(self, device):
-        props = device.pluginProps
-
         if device.id in self.serverDict:
             self.logger.debug(u"Stopping server: " + device.name)
             del self.serverDict[device.id]
