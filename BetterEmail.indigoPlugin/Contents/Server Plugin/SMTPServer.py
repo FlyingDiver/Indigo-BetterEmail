@@ -100,7 +100,7 @@ class SMTPServer(object):
             if smtpProps['encryptionType'] == 'SSL':
                 connection = smtplib.SMTP_SSL(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
                 connection.ehlo()
-                connection.login(smtpProps["serverLogin"], smtpProps["serverPassword"])
+                connection.login(smtpProps["serverLogin"].encode('ascii', 'ignore'), smtpProps["serverPassword"].encode('ascii', 'ignore'))
                 connection.sendmail(emailFrom, toAddresses, msg.as_string())
                 connection.quit()
 
@@ -109,7 +109,7 @@ class SMTPServer(object):
                 connection.ehlo()
                 connection.starttls()
                 connection.ehlo()
-                connection.login(smtpProps["serverLogin"], smtpProps["serverPassword"])
+                connection.login(smtpProps["serverLogin"].encode('ascii', 'ignore'), smtpProps["serverPassword"].encode('ascii', 'ignore'))
                 connection.sendmail(emailFrom, toAddresses, msg.as_string())
                 connection.quit()
 
@@ -117,7 +117,7 @@ class SMTPServer(object):
                 connection = smtplib.SMTP(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
                 connection.ehlo()
                 if (len(smtpProps["serverLogin"]) > 0) and (len(smtpProps["serverPassword"]) > 0):
-                    connection.login(smtpProps["serverLogin"], smtpProps["serverPassword"])
+                    connection.login(smtpProps["serverLogin"].encode('ascii', 'ignore'), smtpProps["serverPassword"].encode('ascii', 'ignore'))
                 connection.sendmail(emailFrom, toAddresses, msg.as_string())
                 connection.quit()
 
