@@ -86,7 +86,7 @@ class POPServer(object):
                             messageSubject = message.get("Subject")
                         self.logger.debug(u"Received Message Subject: " + messageSubject)
                     except Exception, e:
-                        self.logger.error('Error decoding "Subject:" header: %s' %s str(e))
+                        self.logger.error('Error decoding "Subject:" header: %s' % str(e))
                         self.logger.error('Error decoding "Subject:" header: %s, error: %s' % (str(message.get("Subject")), str(e)))
                         messageSubject = ""
 
@@ -98,7 +98,7 @@ class POPServer(object):
                             messageFrom = message.get("From")
                         self.logger.debug(u"Received Message From: " + messageFrom)
                     except Exception, e:
-                        self.logger.error('Error decoding "From:" header: %s' %s str(e))
+                        self.logger.error('Error decoding "From:" header: %s' % str(e))
                         self.logger.error('Error decoding "From:" header: %s, error: %s' % (str(message.get("From")), str(e)))
                         messageFrom = ""
 
@@ -110,7 +110,7 @@ class POPServer(object):
                             messageTo = message.get("To")
                         self.logger.debug(u"Received Message To: " + messageTo)
                     except Exception, e:
-                        self.logger.error('Error decoding "To:" header: %s' %s str(e))
+                        self.logger.error('Error decoding "To:" header: %s' % str(e))
                         self.logger.error('Error decoding "To:" header: %s, error: %s' % (str(message.get("To")), str(e)))
                         messageTo = ""
 
