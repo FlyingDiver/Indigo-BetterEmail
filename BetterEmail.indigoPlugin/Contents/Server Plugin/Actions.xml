@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Actions>
-    <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
+    <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=211</SupportURL>
     <Action id="sendEmail" deviceFilter="self.smtpAccount">
         <Name>Send Email</Name>
         <CallbackMethod>sendEmailAction</CallbackMethod>

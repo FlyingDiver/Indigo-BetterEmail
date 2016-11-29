@@ -328,7 +328,12 @@ class Plugin(indigo.PluginBase):
         self.updater.update(currentVersion='0.0.0')
 
     def clearSMTPQueueMenu(self, valuesDict, typeId):
-        deviceId = int(valuesDict["targetDevice"])
+        try:
+            deviceId = int(valuesDict["targetDevice"])
+        except:
+            self.logger.error(u"Bad Device specified for Clear SMTP Queue operation")
+            return False
+
         for serverId, server in self.serverDict.items():
             if serverId == deviceId:
                 self.logger.debug(u"Clearing SMTP Queue for " + server.device.name)

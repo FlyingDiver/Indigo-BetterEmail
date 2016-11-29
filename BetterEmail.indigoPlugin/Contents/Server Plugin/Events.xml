@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Events>
-    <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177&amp;t=14340</SupportURL>
+    <SupportURL>http://forums.indigodomo.com/viewtopic.php?f=211</SupportURL>
     <Event id="regexMatch">
         <Name>RegEx Pattern Match in Email</Name>
         <ConfigUI>

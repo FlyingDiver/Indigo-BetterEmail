@@ -115,7 +115,7 @@ class POPServer(object):
                                 messageText = message.get_payload()
 
                     except Exception, e:
-                        self.logger.exception('Error decoding Body of Message # ' + messageNum + ": " + str(e))
+                        self.logger.error('Error decoding Body of Message # ' + messageNum + ": " + str(e))
                         messageText = u""
 
                     stateList = [
@@ -135,7 +135,7 @@ class POPServer(object):
                         connection.dele(messageNum)
 
                 except Exception, e:
-                    self.logger.exception('Error fetching Message ' + str(messageNum) + ": " + str(e))
+                    self.logger.error('Error fetching Message ' + str(messageNum) + ": " + str(e))
                     pass
 
             # close the connection and log out
@@ -146,6 +146,6 @@ class POPServer(object):
             self.logger.debug(u"Logged out from POP server")
 
         except Exception, e:
-            self.logger.exception(u"POP server connection error: " + str(e))
+            self.logger.error(u"POP server connection error: " + str(e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)

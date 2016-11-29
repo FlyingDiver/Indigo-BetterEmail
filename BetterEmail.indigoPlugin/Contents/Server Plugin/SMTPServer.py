@@ -126,7 +126,7 @@ class SMTPServer(object):
                 return False
 
         except Exception, e:
-            self.logger.exception(self.device.name + u": SMTP server connection error: " + str(e))
+            self.logger.error(self.device.name + u": SMTP server connection error: " + str(e))
             smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
             smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             return False

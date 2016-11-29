@@ -68,7 +68,7 @@ class IMAPServer(object):
                 self.logger.error(u"Unknown encryption type: " + self.imapProps['encryptionType'])
 
         except Exception, e:
-            self.logger.exception(self.device.name + ': Error connecting to IMAP server: ' + str(e))
+            self.logger.error(self.device.name + ': Error connecting to IMAP server: ' + str(e))
             raise
 
     def idle(self):
@@ -105,7 +105,7 @@ class IMAPServer(object):
                     self.logger.debug(self.device.name + u": Message # " + messageNum + " already seen, skipping...")
                     continue
             except Exception, e:
-                self.logger.exception(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
+                self.logger.error(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
                 pass
 
             try:
@@ -114,7 +114,7 @@ class IMAPServer(object):
                 parser = Parser()
                 message = parser.parsestr(data[0][1])
             except Exception, e:
-                self.logger.exception('Error fetching Message # ' + messageNum + ": " + str(e))
+                self.logger.error('Error fetching Message # ' + messageNum + ": " + str(e))
                 pass
 
             bytes, encoding = decode_header(message.get("Subject"))[0]
@@ -157,7 +157,7 @@ class IMAPServer(object):
                         messageText = message.get_payload()
 
             except Exception, e:
-                self.logger.exception('Error decoding Body of Message # ' + messageNum + ": " + str(e))
+                self.logger.error('Error decoding Body of Message # ' + messageNum + ": " + str(e))
                 messageText = u""
 
             stateList = [
@@ -214,6 +214,6 @@ class IMAPServer(object):
             self.connection.logout()
             self.logger.debug(u"Logged out from IMAP server: " + self.device.name)
         except Exception, e:
-            self.logger.exception(u"IMAP server connection error: " + str(e))
+            self.logger.error(u"IMAP server connection error: " + str(e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
