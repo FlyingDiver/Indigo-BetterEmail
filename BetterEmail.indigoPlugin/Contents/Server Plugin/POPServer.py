@@ -78,26 +78,41 @@ class POPServer(object):
                         parser.feed(str(line + '\n'))
                     message = parser.close()
 
-                    bytes, encoding = decode_header(message.get("Subject"))[0]
-                    if encoding:
-                        messageSubject = bytes.decode(encoding)
-                    else:
-                        messageSubject = message.get("Subject")
-                    self.logger.debug(u"Received Message Subject: " + messageSubject)
+                    try:
+                        bytes, encoding = decode_header(message.get("Subject"))[0]
+                        if encoding:
+                            messageSubject = bytes.decode(encoding)
+                        else:
+                            messageSubject = message.get("Subject")
+                        self.logger.debug(u"Received Message Subject: " + messageSubject)
+                    except Exception, e:
+                        self.logger.error('Error decoding "Subject:" header: %s' %s str(e))
+                        self.logger.error('Error decoding "Subject:" header: %s, error: %s' % (str(message.get("Subject")), str(e)))
+                        messageSubject = ""
 
-                    bytes, encoding = decode_header(message.get("From"))[0]
-                    if encoding:
-                        messageFrom = bytes.decode(encoding)
-                    else:
-                        messageFrom = message.get("From")
-                    self.logger.debug(u"Received Message From: " + messageFrom)
+                    try:
+                        bytes, encoding = decode_header(message.get("From"))[0]
+                        if encoding:
+                            messageFrom = bytes.decode(encoding)
+                        else:
+                            messageFrom = message.get("From")
+                        self.logger.debug(u"Received Message From: " + messageFrom)
+                    except Exception, e:
+                        self.logger.error('Error decoding "From:" header: %s' %s str(e))
+                        self.logger.error('Error decoding "From:" header: %s, error: %s' % (str(message.get("From")), str(e)))
+                        messageFrom = ""
 
-                    bytes, encoding = decode_header(message.get("To"))[0]
-                    if encoding:
-                        messageTo = bytes.decode(encoding)
-                    else:
-                        messageTo = message.get("To")
-                    self.logger.debug(u"Received Message To: " + messageTo)
+                    try:
+                        bytes, encoding = decode_header(message.get("To"))[0]
+                        if encoding:
+                            messageTo = bytes.decode(encoding)
+                        else:
+                            messageTo = message.get("To")
+                        self.logger.debug(u"Received Message To: " + messageTo)
+                    except Exception, e:
+                        self.logger.error('Error decoding "To:" header: %s' %s str(e))
+                        self.logger.error('Error decoding "To:" header: %s, error: %s' % (str(message.get("To")), str(e)))
+                        messageTo = ""
 
                     try:
                         if message.is_multipart():
