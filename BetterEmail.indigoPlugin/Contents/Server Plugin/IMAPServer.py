@@ -125,8 +125,7 @@ class IMAPServer(object):
                     messageSubject = message.get("Subject")
                 self.logger.debug(u"Received Message Subject: " + messageSubject)
             except Exception, e:
-                self.logger.error('Error decoding "Subject:" header: %s' % str(e))
-                self.logger.error('Error decoding "Subject:" header: %s, error: %s' % (str(message.get("Subject")), str(e)))
+                self.logger.debug('Error decoding "Subject:" "%s", error: %s' % (str(message.get("Subject")), str(e)))
                 messageSubject = ""
 
             try:
@@ -137,8 +136,7 @@ class IMAPServer(object):
                     messageFrom = message.get("From")
                 self.logger.debug(u"Received Message From: " + messageFrom)
             except Exception, e:
-                self.logger.error('Error decoding "From:" header: %s' % str(e))
-                self.logger.error('Error decoding "From:" header: %s, error: %s' % (str(message.get("From")), str(e)))
+                self.logger.debug('Error decoding "From:" "%s", error: %s' % (str(message.get("From")), str(e)))
                 messageFrom = ""
 
             try:
@@ -149,16 +147,14 @@ class IMAPServer(object):
                     messageTo = message.get("To")
                 self.logger.debug(u"Received Message To: " + messageTo)
             except Exception, e:
-                self.logger.error('Error decoding "To:" header: %s' % str(e))
-                self.logger.error('Error decoding "To:" header: %s, error: %s' % (str(message.get("To")), str(e)))
+                self.logger.debug('Error decoding "To:" "%s", error: %s' % (str(message.get("To")), str(e)))
                 messageTo = ""
 
             try:
                 messageID = message.get("Message-Id")
                 self.logger.debug(u"Received Message ID: " + messageID)
             except Exception, e:
-                self.logger.error('Error decoding "Message-Id:" header: %s' % str(e))
-                self.logger.error('Error decoding "Message-Id:" header: %s, error: %s' % (str(message.get("Message-Id")), str(e)))
+                self.logger.debug('Error decoding "Message-Id:" "%s", error: %s' % (str(message.get("Message-Id")), str(e)))
                 messageID = ""
 
             try:
