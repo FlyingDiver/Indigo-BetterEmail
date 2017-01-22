@@ -213,7 +213,8 @@ class Plugin(indigo.PluginBase):
 
             newProps["devVersCount"] = kCurDevVersCount
             device.replacePluginPropsOnServer(newProps)
-            self.logger.debug(u"Updated " + device.name + " to version " + str(kCurDevVersCount))
+            device.stateListOrDisplayStateIdChanged()
+            self.logger.debug(u"deviceStartComm: Updated " + device.name + " to version " + str(kCurDevVersCount))
 
         else:
             self.logger.error(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)
@@ -269,7 +270,7 @@ class Plugin(indigo.PluginBase):
 
     ########################################
     def validateDeviceConfigUi(self, valuesDict, typeId, devId):
-        self.logger.debug(u"validateDeviceConfigUi called")
+        self.logger.debug(u"validateDeviceConfigUi")
         errorsDict = indigo.Dict()
 
         try:
@@ -308,7 +309,7 @@ class Plugin(indigo.PluginBase):
     ########################################
     # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
     ######################
-    def sendEmailAction(self, pluginAction, smtpDevice):
+    def sendEmailAction(self, pluginAction, smtpDevice, callerWaitingForResult):
         self.logger.debug(u"sendEmailAction queueing message '" + indigo.activePlugin.substitute(pluginAction.props["emailSubject"]) + "'")
         smtpServer = self.serverDict[smtpDevice.id]
         smtpServer.smtpQ.put(pluginAction)

@@ -77,6 +77,7 @@
         </States>
         <UiDisplayStateId>serverStatus</UiDisplayStateId>
     </Device>
+    
     <Device type="custom" id="popAccount">
         <Name>POP Server</Name>
         <ConfigUI>
@@ -147,6 +148,7 @@
         </States>
         <UiDisplayStateId>serverStatus</UiDisplayStateId>
     </Device>
+    
     <Device type="custom" id="smtpAccount">
         <Name>SMTP Server</Name>
         <ConfigUI>

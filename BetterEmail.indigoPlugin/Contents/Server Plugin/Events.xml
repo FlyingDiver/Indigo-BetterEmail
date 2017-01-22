@@ -43,6 +43,9 @@
             <Field id="stringPattern" type="textfield">
                 <Label>String to match:</Label>
             </Field>
+            <Field id="stringNote" type="label" fontSize="small" fontColor="darkgray">
+                <Label>String Match is an exact match to the message field.  For substring matches, use the RegEx Pattern Match Event.</Label>
+            </Field>
         </ConfigUI>
     </Event>
 </Events>
