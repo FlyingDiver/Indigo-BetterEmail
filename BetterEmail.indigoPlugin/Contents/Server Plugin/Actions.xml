@@ -5,6 +5,13 @@
         <Name>Send Email</Name>
         <CallbackMethod>sendEmailAction</CallbackMethod>
         <ConfigUI>
+        	<Field id="emailFormat" type="menu" defaultValue="plain">
+        		<Label>Format:</Label>
+        		<List>
+        			<Option value="plain">Plain text</Option>
+        			<Option value="html">HTML</Option>
+        		</List>
+        	</Field>
             <Field id="emailTo" type="textfield">
                 <Label>Email To:</Label>
             </Field>
@@ -19,14 +26,36 @@
                 <Label>Subject:</Label>
             </Field>
             <Field id="emailMessage" type="textfield">
-                <Label>Message:</Label>
+                <Label>Message:
+    			
+    			
+    			
+    			
+    			
+    			
+    			
+    			
+    			
+    			
+    			
+    			
+    			</Label>
+            </Field>
+            <Field id="emailMessageNotes" type="label" fontSize="small" fontColor="darkgray" alignWithControl="true">
+            	<Label>(Use Alt+Enter for line breaks)</Label>
             </Field>
             <Field id="emailAttachments" type="textfield">
-                <Label>Attachments (comma separated):</Label>
+                <Label>Attachments:</Label>
+            </Field>
+            <Field id="emailAttachmentsNotes" type="label" fontSize="small" fontColor="darkgray" alignWithControl="true">
+            	<Label>comma separated</Label>
             </Field>
             <Field id="simpleSeparator2" type="separator"/>
             <Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
                 <Label>Variable and Device State Substitution is enabled for all fields. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+            </Field>
+            <Field id="messageNote2" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="emailFormat" visibleBindingValue="html">
+                <Label>Message should be HTML format</Label>
             </Field>
         </ConfigUI>
     </Action>

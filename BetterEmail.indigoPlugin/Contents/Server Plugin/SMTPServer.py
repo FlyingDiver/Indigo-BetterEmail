@@ -71,13 +71,15 @@ class SMTPServer(object):
 
         emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
         emailBCC = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
+        
+        emailFormat = pluginAction.props.get("emailFormat", "plain")
 
         attach = pluginAction.props.get("emailAttachments", "")
         if len(attach) == 0:
-            msg = MIMEText(emailMessage, 'plain', 'utf-8')
+            msg = MIMEText(emailMessage, emailFormat, 'utf-8')
         else:
             msg = MIMEMultipart()
-            msg.attach(MIMEText(emailMessage, 'plain', 'utf-8'))
+            msg.attach(MIMEText(emailMessage, emailFormat, 'utf-8'))
 
             files = indigo.activePlugin.substitute(attach)
             fileList = files.split(",")
