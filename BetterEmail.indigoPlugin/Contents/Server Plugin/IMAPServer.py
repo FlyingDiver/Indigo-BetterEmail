@@ -99,14 +99,16 @@ class IMAPServer(object):
         self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
         for messageNum in msg_ids[0].split():
             self.logger.debug(self.device.name + u": Checking Message # " + messageNum)
-            try:
-                typ, resp = self.connection.fetch(messageNum, '(FLAGS)')
-                if "$IndigoProcessed" in resp[0]:
-                    self.logger.debug(self.device.name + u": Message # " + messageNum + " already seen, skipping...")
-                    continue
-            except Exception, e:
-                self.logger.error(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
-                pass
+            
+            if not self.imapProps['checkSeen']:         # only check for IndigoProcessed flag if we're not processing all messages
+                try:
+                    typ, resp = self.connection.fetch(messageNum, '(FLAGS)')
+                    if "$IndigoProcessed" in resp[0]:
+                        self.logger.debug(u"%s: Message # %s already seen, skipping..." % (self.device.name, messageNum))
+                        continue
+                except Exception, e:
+                    self.logger.error(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
+                    pass
 
             try:
                 self.logger.debug(self.device.name + u": Fetching Message # " + messageNum)
@@ -159,13 +161,22 @@ class IMAPServer(object):
 
             try:
                 if message.is_multipart():
-                    part0 = message.get_payload(0)  # we only look at the first alternative content part
-                    charset = part0.get_content_charset()
-                    if charset:
-                        messageText = part0.get_payload(decode=True).decode(charset)
+                    self.logger.threaddebug('checkMsgs: Decoding multipart message')
+                    for part in message.walk():
+                        type = part.get_content_type()
+                        self.logger.threaddebug('\tfound type: %s' % type)
+                        if type == "text/plain":
+                            break
                     else:
-                        messageText = part0.get_payload()
+                        raise Exception("No plain text segment found in multipart message")
+
+                    charset = part.get_content_charset()
+                    if charset:
+                        messageText = part.get_payload(decode=True).decode(charset)
+                    else:
+                        messageText = part.get_payload()
                 else:
+                    self.logger.threaddebug('checkMsgs: Decoding simple message')
                     charset = message.get_content_charset()
                     if charset:
                         messageText = message.get_payload(decode=True).decode(charset)
@@ -182,6 +193,7 @@ class IMAPServer(object):
                         {'key':'messageText',   'value':messageText},
                         {'key':'lastMessage',   'value':messageID}
             ]
+            self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
             self.device.updateStatesOnServer(stateList)
             indigo.activePlugin.triggerCheck(self.device)
             broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}

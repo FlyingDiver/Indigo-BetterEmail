@@ -116,12 +116,20 @@ class POPServer(object):
 
                     try:
                         if message.is_multipart():
-                            part0 = message.get_payload(0)  # we only look at the first alternative content part
-                            charset = part0.get_content_charset()
-                            if charset:
-                                messageText = part0.get_payload(decode=True).decode(charset)
+                            self.logger.threaddebug('checkMsgs: Decoding multipart message')
+                            for part in message.walk():
+                                type = part.get_content_type()
+                                self.logger.threaddebug('\tfound type: %s' % type)
+                                if type == "text/plain":
+                                    break
                             else:
-                                messageText = part0.get_payload()
+                                raise Exception("No plain text segment found in multipart message")
+                                
+                            charset = part.get_content_charset()
+                            if charset:
+                                messageText = part.get_payload(decode=True).decode(charset)
+                            else:
+                                messageText = part.get_payload()
                         else:
                             charset = message.get_content_charset()
                             if charset:
@@ -139,7 +147,8 @@ class POPServer(object):
                                 {'key':'messageText',   'value':messageText},
                                 {'key':'lastMessage',   'value':uidl}
                     ]
-                    self.device.updateStatesOnServer(stateList)
+                   self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
+                   self.device.updateStatesOnServer(stateList)
                     broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}
                     indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
                     indigo.activePlugin.triggerCheck(self.device)

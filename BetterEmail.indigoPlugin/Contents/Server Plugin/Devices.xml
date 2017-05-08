@@ -42,6 +42,10 @@
                 <Label>Delete:</Label>
                 <Description>Delete the email message after processing.</Description>
             </Field>
+            <Field id="checkSeen" type="checkbox" defaultValue="false">
+                <Label>Check All:</Label>
+                <Description>Process all messages every poll.  For testing purposes only.</Description>
+            </Field>
         </ConfigUI>
         <States>
             <State id="lastMessage">
