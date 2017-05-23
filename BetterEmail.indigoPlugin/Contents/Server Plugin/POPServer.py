@@ -147,8 +147,8 @@ class POPServer(object):
                                 {'key':'messageText',   'value':messageText},
                                 {'key':'lastMessage',   'value':uidl}
                     ]
-                   self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
-                   self.device.updateStatesOnServer(stateList)
+                    self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
+                    self.device.updateStatesOnServer(stateList)
                     broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}
                     indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
                     indigo.activePlugin.triggerCheck(self.device)
