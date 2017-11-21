@@ -53,12 +53,12 @@ class Plugin(indigo.PluginBase):
     ####################
 
     def getDeviceConfigUiValues(self, pluginProps, typeId, devId):
-        self.logger.debug("getDeviceConfigUiValues, typeID = " + typeId)
+        self.logger.threaddebug("getDeviceConfigUiValues, typeID = " + typeId)
         valuesDict = indigo.Dict(pluginProps)
         errorsDict = indigo.Dict()
 
         if len(valuesDict) == 0:
-            self.logger.debug("getDeviceConfigUiValues: no values, populating encryptionType and hostPort")
+            self.logger.threaddebug("getDeviceConfigUiValues: no values, populating encryptionType and hostPort")
             if typeId == "imapAccount":
                 valuesDict["encryptionType"] = "SSL"
                 valuesDict["hostPort"] = "993"
@@ -69,7 +69,7 @@ class Plugin(indigo.PluginBase):
                 valuesDict["encryptionType"] = "SSL"
                 valuesDict["hostPort"] = "465"
         else:
-            self.logger.debug("getDeviceConfigUiValues: no change, already populated")
+            self.logger.threaddebug("getDeviceConfigUiValues: no change, already populated")
 
         return (valuesDict, errorsDict)
 
@@ -225,7 +225,7 @@ class Plugin(indigo.PluginBase):
 
         else:
             if device.id not in self.serverDict:
-                self.logger.debug(u"Starting server: " + device.name)
+                self.logger.debug(device.name + u": Starting device")
                 if device.deviceTypeId == "imapAccount":
                     self.serverDict[device.id] = IMAPServer(device)
                 elif device.deviceTypeId == "popAccount":
@@ -233,19 +233,21 @@ class Plugin(indigo.PluginBase):
                 elif device.deviceTypeId == "smtpAccount":
                     self.serverDict[device.id] = SMTPServer(device)
                 else:
-                    self.logger.error(u"Unknown server device type: " + str(device.deviceTypeId))
+                    self.logger.error(device.name + u"Unknown device type: " + str(device.deviceTypeId))
             else:
-                self.logger.debug(u"Duplicate Device ID: " + device.name)
+                self.logger.debug(device.name + u": Duplicate Device ID")
 
     ########################################
     # Terminate communication with servers
     #
     def deviceStopComm(self, device):
         if device.id in self.serverDict:
-            self.logger.debug(u"Stopping server: " + device.name)
-            del self.serverDict[device.id]
+            devID = device.id
+            self.logger.debug(device.name + u": Stopping device")
+            self.serverDict[devID].shutDown()
+            del self.serverDict[devID]
         else:
-            self.logger.debug(u"Unknown Device ID: " + device.name)
+            self.logger.debug(device.name + u"Unknown Device ID: " + device.id)
 
     ########################################
 
@@ -363,8 +365,6 @@ class Plugin(indigo.PluginBase):
     def pollAllServers(self):
         self.logger.debug(u"Polling All Email Servers")
         for serverId, server in self.serverDict.items():
-            self.logger.debug(u"Polling serverId: " + str(
-                serverId) + ", serverTypeId: " + server.device.deviceTypeId + "(" + server.device.name + ")")
             server.poll()
 
     def pollServer(self, device):

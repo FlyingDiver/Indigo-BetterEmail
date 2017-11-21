@@ -26,6 +26,9 @@ class POPServer(object):
     def __str__(self):
         return self.status
 
+    def shutDown(self):
+        self.logger.debug(self.device.name + u": shutting down")
+
     def pollCheck(self):
         counter = int(self.device.pluginProps['pollingFrequency'])
         if counter == 0:  # no polling for frequency = 0

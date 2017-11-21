@@ -12,7 +12,7 @@ from email import Charset
 from email.header import decode_header
 
 from Queue import Queue
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 
 import indigo
 
@@ -29,27 +29,29 @@ class IMAPServer(object):
             self.thread = Thread(target=self.idle)
             self.event = Event()
             self.thread.start()
+            self.msgLock = Lock()
+            
         self.pollCounter = 0  # check on first pass
 
-    def __del__(self, device):
+    def __str__(self):
+        return self.status
+
+    def shutDown(self):
+        self.logger.debug(self.device.name + u": shutting down")
         if self.imapProps['useIDLE']:
             self.event.set()
             self.connection.close()
             self.connection.logout()
 
-    def __str__(self):
-        return self.status
-
     def connect(self):
         try:
+            self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
             if self.imapProps['encryptionType'] == 'SSL':
-                self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
                 self.connection = imaplib2.IMAP4_SSL(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
                 self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
                 self.connection.select("INBOX")
 
             elif self.imapProps['encryptionType'] == 'StartTLS':
-                self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
                 self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'),int(self.imapProps['hostPort']))
                 self.logger.debug(self.device.name + u": Doing starttls()")
                 self.connection.starttls()
@@ -59,14 +61,14 @@ class IMAPServer(object):
                 self.connection.select("INBOX")
 
             elif self.imapProps['encryptionType'] == 'None':
-                self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
                 self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
                 self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
                 self.connection.select("INBOX")
 
             else:
                 self.logger.error(u"Unknown encryption type: " + self.imapProps['encryptionType'])
-
+                self.connection = None
+                
         except Exception, e:
             self.logger.error(self.device.name + ': Error connecting to IMAP server: ' + str(e))
             raise
@@ -75,6 +77,7 @@ class IMAPServer(object):
         self.logger.debug(self.device.name + u": idle() called")
 
         def callback(args):
+            self.logger.debug(self.device.name + u": IDLE Event Received")
             if not self.event.isSet():
                 self.needsync = True
                 self.event.set()
@@ -90,13 +93,16 @@ class IMAPServer(object):
 
             if self.needsync:
                 self.event.clear()
-                self.logger.debug(self.device.name + u": IDLE Event Received")
-                self.checkMsgs()
+                with self.msgLock:
+                    self.checkMsgs()
+
 
     def checkMsgs(self):
+        
         self.logger.debug(self.device.name + u": Doing checkMsgs")
         typ, msg_ids = self.connection.search(None, 'ALL')
         self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
+        
         for messageNum in msg_ids[0].split():
             self.logger.debug(self.device.name + u": Checking Message # " + messageNum)
             
@@ -104,7 +110,7 @@ class IMAPServer(object):
                 try:
                     typ, resp = self.connection.fetch(messageNum, '(FLAGS)')
                     if "$IndigoProcessed" in resp[0]:
-                        self.logger.debug(u"%s: Message # %s already seen, skipping..." % (self.device.name, messageNum))
+                        self.logger.debug(self.device.name + u"%s: Message # %s already seen, skipping..." % (self.device.name, messageNum))
                         continue
                 except Exception, e:
                     self.logger.error(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
@@ -125,9 +131,9 @@ class IMAPServer(object):
                     messageSubject = bytes.decode(encoding)
                 else:
                     messageSubject = message.get("Subject")
-                self.logger.debug(u"Received Message Subject: " + messageSubject)
+                self.logger.debug(self.device.name + u": Received Message Subject: " + messageSubject)
             except Exception, e:
-                self.logger.debug('Error decoding "Subject:" "%s", error: %s' % (str(message.get("Subject")), str(e)))
+                self.logger.debug(self.device.name + 'Error decoding "Subject:" "%s", error: %s' % (str(message.get("Subject")), str(e)))
                 messageSubject = ""
 
             try:
@@ -136,9 +142,9 @@ class IMAPServer(object):
                     messageFrom = bytes.decode(encoding)
                 else:
                     messageFrom = message.get("From")
-                self.logger.debug(u"Received Message From: " + messageFrom)
+                self.logger.debug(self.device.name + u": Received Message From: " + messageFrom)
             except Exception, e:
-                self.logger.debug('Error decoding "From:" "%s", error: %s' % (str(message.get("From")), str(e)))
+                self.logger.debug(self.device.name + 'Error decoding "From:" "%s", error: %s' % (str(message.get("From")), str(e)))
                 messageFrom = ""
 
             try:
@@ -147,21 +153,20 @@ class IMAPServer(object):
                     messageTo = bytes.decode(encoding)
                 else:
                     messageTo = message.get("To")
-                self.logger.debug(u"Received Message To: " + messageTo)
+                self.logger.debug(self.device.name + u": Received Message To: " + messageTo)
             except Exception, e:
-                self.logger.debug('Error decoding "To:" "%s", error: %s' % (str(message.get("To")), str(e)))
+                self.logger.debug(self.device.name + 'Error decoding "To:" "%s", error: %s' % (str(message.get("To")), str(e)))
                 messageTo = ""
 
             try:
                 messageID = message.get("Message-Id")
-                self.logger.debug(u"Received Message ID: " + messageID)
+                self.logger.debug(self.device.name + u": Received Message ID: " + messageID)
             except Exception, e:
-                self.logger.debug('Error decoding "Message-Id:" "%s", error: %s' % (str(message.get("Message-Id")), str(e)))
                 messageID = ""
 
             try:
                 if message.is_multipart():
-                    self.logger.threaddebug('checkMsgs: Decoding multipart message')
+                    self.logger.threaddebug(self.device.name + 'checkMsgs: Decoding multipart message')
                     for part in message.walk():
                         type = part.get_content_type()
                         self.logger.threaddebug('\tfound type: %s' % type)
@@ -210,8 +215,6 @@ class IMAPServer(object):
         self.connection.expunge()
 
     def pollCheck(self):
-        if self.device.pluginProps['useIDLE']:  # skip poll when using IDLE
-            return False
 
         counter = int(self.device.pluginProps['pollingFrequency'])
         if counter == 0:  # no polling for frequency = 0
@@ -226,10 +229,10 @@ class IMAPServer(object):
 
     def poll(self):
         if self.imapProps['useIDLE']:  # skip poll when using IDLE
-            self.logger.debug(u"Skipping IMAP Server using IDLE: " + self.device.name)
+            self.logger.debug(self.device.name + u": Skipping poll for IDLE IMAP Server")
             return
 
-        self.logger.debug(u"Polling IMAP Server: " + self.device.name)
+        self.logger.debug(self.device.name + u": Polling IMAP Server")
 
         try:
             self.connect()
@@ -240,7 +243,7 @@ class IMAPServer(object):
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
             self.connection.close()
             self.connection.logout()
-            self.logger.debug(u"Logged out from IMAP server: " + self.device.name)
+            self.logger.debug(u"\tLogged out from IMAP server: " + self.device.name)
         except Exception, e:
             self.logger.error(u"IMAP server connection error: " + str(e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")

@@ -37,6 +37,9 @@ class SMTPServer(object):
     def __str__(self):
         return self.status
 
+    def shutDown(self):
+        self.logger.debug(self.device.name + u": shutting down")
+
     def clearQueue(self):
         self.smtpQ = Queue()  # just nuke the old queue and replace it
 
