@@ -1,32 +1,5 @@
-# BetterEmail
+## About the BetterEmail plugin
 
-Plugin for the Indigo Home Automation system.
+This [Indigo](http://www.indigodomo.com/) plugin provides enhances capabilities for sending and receiving email from within Indigo.
 
-This plugin provides enhances capabilities for sending and receiving email from within Indigo.
-
-**PluginID**: com.flyingdiver.indigoplugin.betteremail
-
-### Broadcast Messages
-
-    MessageType: messageReceived 
-    Returns dictionary:
-    {
-    	'messageFrom':  	<text string>,
-		'messageTo': 		<text string>,
-		'messageSubject': 	<text string>,
-		'messageText': 		<text string>
-	}
-
-    MessageType: messageSent
-    Returns dictionary:
-    {
-    	'messageFrom':  	<text string>,
-		'messageTo': 		<text string>,
-		'messageSubject': 	<text string>,
-		'messageText': 		<text string>
-	}
-
-### Indigo 7 Only
-
-
-This plugin only works under Indigo 7 or greater.
+Check out the [full documentation](https://github.com/IndigoDomotics/Indigo-BetterEmail/wiki) for a complete description of how to use the plugin. You can always get the latest release directly from the [GitHub repo](https://github.com/IndigoDomotics/Indigo-BetterEmail/releases) or from the [Indigo Plugin Store](http://www.indigodomo.com/pluginstore/).
