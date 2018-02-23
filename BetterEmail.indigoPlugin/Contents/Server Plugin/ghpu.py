@@ -120,46 +120,43 @@ class GitHubPluginUpdater(object):
 	# returns a tuple for the current rate limit: (limit, remaining, resetTime)
 	# https://developer.github.com/v3/rate_limit/
 	# NOTE this does not count against the current limit
-	def getRateLimit(self):
-		limiter = self._GET('/rate_limit')
+    def getRateLimit(self):
+        limiter = self._GET('/rate_limit')
 
-		remain = int(limiter['rate']['remaining'])
-		limit = int(limiter['rate']['limit'])
-		resetAt = int(limiter['rate']['reset'])
-
-		return (limit, remain, resetAt)
+        remain = int(limiter['rate']['remaining'])
+        limit = int(limiter['rate']['limit'])
+        resetAt = int(limiter['rate']['reset'])
+        return (limit, remain, resetAt)
 
 	#---------------------------------------------------------------------------
 	# form a GET request to api.github.com and return the parsed JSON response
-	def _GET(self, requestPath):
-		self.logger.debug('GET %s' % requestPath)
+    
+    def _GET(self, requestPath):
+        self.logger.debug('GET %s' % requestPath)
+        headers = {
+            'User-Agent': 'Indigo-Plugin-Updater',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        data = None
+        f = subprocess.Popen(["/usr/bin/curl",  'https://api.github.com'+ requestPath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        out, err = f.communicate()
+        self.logger.debug(u'HTTP Err result: ' + unicode(err) )
+        self.logger.debug(u'ReturnCode:{0}'.format(unicode(f.returncode)))
+      
+        if (int(f.returncode) == 0):
+            data = json.loads(out)
+            self.logger.debug(u'Json results:' + unicode(data))
+        elif (400 <= f.status < 500):
+            error = json.loads(out)
+            self.logger.error('%s' % error['message'])
+        else:
+            self.logger.error('Error: %s' % unicode(err))
 
-		headers = {
-			'User-Agent': 'Indigo-Plugin-Updater',
-			'Accept': 'application/vnd.github.v3+json'
-		}
+        return data
 
-		data = None
-
-		conn = httplib.HTTPSConnection('api.github.com')
-		conn.request('GET', requestPath, None, headers)
-
-		resp = conn.getresponse()
-		self.logger.debug('HTTP %d %s' % (resp.status, resp.reason))
-
-		if (resp.status == 200):
-			data = json.loads(resp.read())
-		elif (400 <= resp.status < 500):
-			error = json.loads(resp.read())
-			self.logger.error('%s' % error['message'])
-		else:
-			self.logger.error('Error: %s' % resp.reason)
-
-		return data
-
-	#---------------------------------------------------------------------------
-	# prepare for an update
-	def _prepareForUpdate(self, currentVersion=None):
+    #---------------------------------------------------------------------------
+    # prepare for an update
+    def _prepareForUpdate(self, currentVersion=None):
 		self.logger.info('Checking for updates...')
 
 		# sort out the currentVersion based on user params

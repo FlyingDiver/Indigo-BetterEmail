@@ -4,6 +4,7 @@
 # Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
 import ssl
+import time
 import imaplib2
 import logging
 
@@ -24,14 +25,17 @@ class IMAPServer(object):
         self.logger = logging.getLogger("Plugin.IMAPServer")
         self.device = device
         self.imapProps = self.device.pluginProps
+        self.pollCounter = 0  # check on first pass
+
         if self.imapProps['useIDLE']:
             self.connect()
             self.thread = Thread(target=self.idle)
             self.event = Event()
             self.thread.start()
             self.msgLock = Lock()
-            
-        self.pollCounter = 0  # check on first pass
+            self.lastIDLE = time.time()
+            self.checkMsgs()
+
 
     def __str__(self):
         return self.status
@@ -39,9 +43,25 @@ class IMAPServer(object):
     def shutDown(self):
         self.logger.debug(self.device.name + u": shutting down")
         if self.imapProps['useIDLE']:
-            self.event.set()
+            try:
+                self.event.set()
+                self.connection.close()
+                self.connection.logout()
+            except Exception, e:
+                self.logger.error(u"IMAP IDLE server shutdown error: " + str(e))
+            
+    def reconnect(self):
+        self.logger.debug(self.device.name + u": Resetting connection for IDLE IMAP Server")
+        try:
             self.connection.close()
             self.connection.logout()
+            self.connect()
+            self.thread = Thread(target=self.idle)
+            self.event = Event()
+            self.thread.start()
+            self.msgLock = Lock()
+        except Exception, e:
+            self.logger.error(u"IMAP IDLE server reconnection error: " + str(e))
 
     def connect(self):
         try:
@@ -78,6 +98,7 @@ class IMAPServer(object):
 
         def callback(args):
             self.logger.debug(self.device.name + u": IDLE Event Received")
+            self.lastIDLE = time.time()
             if not self.event.isSet():
                 self.needsync = True
                 self.event.set()
@@ -102,7 +123,9 @@ class IMAPServer(object):
         self.logger.debug(self.device.name + u": Doing checkMsgs")
         typ, msg_ids = self.connection.search(None, 'ALL')
         self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
-        
+        if msg_ids == None:
+            return
+            
         for messageNum in msg_ids[0].split():
             self.logger.debug(self.device.name + u": Checking Message # " + messageNum)
             
@@ -216,6 +239,14 @@ class IMAPServer(object):
 
     def pollCheck(self):
 
+        #  check to see if we need to reconnect
+        if self.imapProps['useIDLE']:
+            if time.time() > (self.lastIDLE + 3600.0):   # if we go an hour without an IDLE event, reconnect
+                self.logger.warning(self.device.name + u": IDLE Event Timeout, reconnecting")
+                self.connection.close()
+                self.connection.logout()
+                self.connect()        
+        
         counter = int(self.device.pluginProps['pollingFrequency'])
         if counter == 0:  # no polling for frequency = 0
             return False
@@ -228,8 +259,7 @@ class IMAPServer(object):
             return False
 
     def poll(self):
-        if self.imapProps['useIDLE']:  # skip poll when using IDLE
-            self.logger.debug(self.device.name + u": Skipping poll for IDLE IMAP Server")
+        if self.imapProps['useIDLE']:
             return
 
         self.logger.debug(self.device.name + u": Polling IMAP Server")

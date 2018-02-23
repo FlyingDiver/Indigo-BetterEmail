@@ -42,7 +42,7 @@ class POPServer(object):
             return False
 
     def poll(self):
-        self.logger.debug(u"Connecting to POP Server: " + self.device.name)
+        self.logger.debug(self.device.name + u": Connecting to POP Server")
         oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages", indigo.List())
         newMessageList = indigo.List()
 
@@ -54,28 +54,27 @@ class POPServer(object):
                 connection = poplib.POP3(self.device.pluginProps['address'].encode('ascii', 'ignore'),
                                          int(self.device.pluginProps['hostPort']))
             else:
-                self.logger.error(
-                    u"Unknown encryption type: " + self.device.pluginProps['encryptionType'])
+                self.logger.error(self.device.name + u": Unknown encryption type: " + self.device.pluginProps['encryptionType'])
                 return
 
             connection.user(self.device.pluginProps['serverLogin'])
             connection.pass_(self.device.pluginProps['serverPassword'])
             (numMessages, totalSize) = connection.stat()
             if numMessages == 0:
-                self.logger.debug(u"No messages to process")
+                self.logger.debug(self.device.name + u": No messages to process")
 
             for i in range(numMessages):
                 messageNum = i + 1
-                self.logger.debug(u"Retrieving Message # " + str(messageNum))
+                self.logger.debug(self.device.name + u": Retrieving Message # " + str(messageNum))
                 try:
                     (server_msg, body, octets) = connection.retr(messageNum)
                     uidl = connection.uidl(messageNum).split()[2]
                     newMessageList.append(str(uidl))
                     if uidl in oldMessageList:
-                        self.logger.debug(u"Message " + uidl + " already seen, skipping...")
+                        self.logger.debug(self.device.name + u": Message " + uidl + " already seen, skipping...")
                         continue
 
-                    self.logger.debug(u"Parsing message " + uidl)
+                    self.logger.debug(self.device.name + u": Parsing message " + uidl)
                     parser = FeedParser()
                     for line in body:
                         parser.feed(str(line + '\n'))
@@ -87,10 +86,9 @@ class POPServer(object):
                             messageSubject = bytes.decode(encoding)
                         else:
                             messageSubject = message.get("Subject")
-                        self.logger.debug(u"Received Message Subject: " + messageSubject)
+                        self.logger.debug(self.device.name + u": Received Message Subject: " + messageSubject)
                     except Exception, e:
-                        self.logger.error('Error decoding "Subject:" header: %s' % str(e))
-                        self.logger.error('Error decoding "Subject:" header: %s, error: %s' % (str(message.get("Subject")), str(e)))
+                        self.logger.error(self.device.name + u': Error decoding "Subject:" header: %s, error: %s' % (str(message.get("Subject")), str(e)))
                         messageSubject = ""
 
                     try:
@@ -101,8 +99,7 @@ class POPServer(object):
                             messageFrom = message.get("From")
                         self.logger.debug(u"Received Message From: " + messageFrom)
                     except Exception, e:
-                        self.logger.error('Error decoding "From:" header: %s' % str(e))
-                        self.logger.error('Error decoding "From:" header: %s, error: %s' % (str(message.get("From")), str(e)))
+                        self.logger.error(self.device.name + u': Error decoding "From:" header: %s, error: %s' % (str(message.get("From")), str(e)))
                         messageFrom = ""
 
                     try:
@@ -111,15 +108,14 @@ class POPServer(object):
                             messageTo = bytes.decode(encoding)
                         else:
                             messageTo = message.get("To")
-                        self.logger.debug(u"Received Message To: " + messageTo)
+                        self.logger.debug(self.device.name + u": Received Message To: " + messageTo)
                     except Exception, e:
-                        self.logger.error('Error decoding "To:" header: %s' % str(e))
-                        self.logger.error('Error decoding "To:" header: %s, error: %s' % (str(message.get("To")), str(e)))
+                        self.logger.error(self.device.name + u': Error decoding "To:" header: %s, error: %s' % (str(message.get("To")), str(e)))
                         messageTo = ""
 
                     try:
                         if message.is_multipart():
-                            self.logger.threaddebug('checkMsgs: Decoding multipart message')
+                            self.logger.threaddebug(self.device.name + u": checkMsgs: Decoding multipart message')
                             for part in message.walk():
                                 type = part.get_content_type()
                                 self.logger.threaddebug('\tfound type: %s' % type)
@@ -141,7 +137,7 @@ class POPServer(object):
                                 messageText = message.get_payload()
 
                     except Exception, e:
-                        self.logger.error('Error decoding Body of Message # ' + messageNum + ": " + str(e))
+                        self.logger.error(self.device.name + u': Error decoding Body of Message # ' + messageNum + ": " + str(e))
                         messageText = u""
 
                     stateList = [
@@ -150,7 +146,7 @@ class POPServer(object):
                                 {'key':'messageText',   'value':messageText},
                                 {'key':'lastMessage',   'value':uidl}
                     ]
-                    self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
+                    self.logger.threaddebug(self.device.name + u': checkMsgs: Updating states on server: %s' % str(stateList))
                     self.device.updateStatesOnServer(stateList)
                     broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}
                     indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
@@ -158,11 +154,11 @@ class POPServer(object):
 
                     # If configured to do so, delete the message, otherwise mark it as processed
                     if self.device.pluginProps['delete']:
-                        self.logger.debug(u"Deleting Message # " + str(messageNum))
+                        self.logger.debug(self.device.name + u": Deleting Message # " + str(messageNum))
                         connection.dele(messageNum)
 
                 except Exception, e:
-                    self.logger.error('Error fetching Message ' + str(messageNum) + ": " + str(e))
+                    self.logger.error(self.device.name + u': Error fetching Message ' + str(messageNum) + ": " + str(e))
                     pass
 
             # close the connection and log out
@@ -170,9 +166,9 @@ class POPServer(object):
             self.device.updateStateOnServer(key="serverStatus", value="Success")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
             connection.quit()
-            self.logger.debug(u"Logged out from POP server")
+            self.logger.debug(self.device.name + u": Logged out from POP server")
 
         except Exception, e:
-            self.logger.error(u"POP server connection error: " + str(e))
+            self.logger.error(self.device.name + u": POP server connection error: " + str(e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)

@@ -49,7 +49,7 @@ class SMTPServer(object):
         # base64, and instead use quoted-printable.
         Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
 
-        self.logger.debug(u"Sending to SMTP Server: " + self.device.name)
+        self.logger.debug(self.device.name + u": Sending an email")
 
         smtpDevice = indigo.devices[pluginAction.deviceId]
         smtpProps = smtpDevice.pluginProps
@@ -57,19 +57,19 @@ class SMTPServer(object):
         if "emailTo" in pluginAction.props:
             emailTo = indigo.activePlugin.substitute(pluginAction.props["emailTo"])
         else:
-            self.logger.error(u"No emailTo property in plugin property dict")
+            self.logger.error(self.device.name + u": No emailTo property in plugin property dict")
             return
 
         if "emailSubject" in pluginAction.props:
             emailSubject = indigo.activePlugin.substitute(pluginAction.props["emailSubject"])
         else:
-            self.logger.error(u"No emailSubject property in plugin property dict")
+            self.logger.error(self.device.name + u": No emailSubject property in plugin property dict")
             return
 
         if "emailMessage" in pluginAction.props:
             emailMessage = indigo.activePlugin.substitute(pluginAction.props["emailMessage"])
         else:
-            self.logger.error(u"No emailMessage property in plugin property dict")
+            self.logger.error(self.device.name + u": No emailMessage property in plugin property dict")
             return
 
         emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
