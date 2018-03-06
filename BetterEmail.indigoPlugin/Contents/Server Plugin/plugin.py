@@ -13,10 +13,7 @@ from SMTPServer import SMTPServer
 from IMAPServer import IMAPServer
 from POPServer import POPServer
 
-from ghpu import GitHubPluginUpdater
-
 kCurDevVersCount = 3  # current version of plugin devices
-
 
 ################################################################################
 class Plugin(indigo.PluginBase):
@@ -38,11 +35,6 @@ class Plugin(indigo.PluginBase):
 
     def startup(self):
         self.logger.info(u"Starting Better Email")
-
-        self.updater = GitHubPluginUpdater(self)
-        self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
-        self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
-        self.next_update_check = time.time()
 
         self.serverDict = dict()
         self.triggers = {}
@@ -157,9 +149,6 @@ class Plugin(indigo.PluginBase):
     def validatePrefsConfigUi(self, valuesDict):
         self.logger.debug(u"validatePrefsConfigUi called")
         errorsDict = indigo.Dict()
-        updateFrequency = valuesDict['updateFrequency']
-        if len(updateFrequency) == 0 or int(updateFrequency) < 0 or int(updateFrequency) > 168:
-            errorsDict['updateFrequency'] = u"Update frequency is invalid - enter number of hours between 0 and 168"
 
         if len(errorsDict) > 0:
             return (False, valuesDict, errorsDict)
@@ -174,10 +163,6 @@ class Plugin(indigo.PluginBase):
                 self.logLevel = logging.INFO
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
-
-            self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
-            self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
-            self.next_update_check = time.time()
 
     ########################################
     # Called for each enabled Device belonging to plugin
@@ -256,10 +241,6 @@ class Plugin(indigo.PluginBase):
         try:
             while True:
 
-                if (self.updateFrequency > 0.0) and (time.time() > self.next_update_check):
-                    self.next_update_check = time.time() + self.updateFrequency
-                    self.updater.checkForUpdate()
-
                 for serverId, server in self.serverDict.items():
                     if server.pollCheck():
                         server.poll()
@@ -320,15 +301,6 @@ class Plugin(indigo.PluginBase):
     ########################################
     # Menu Methods
     ########################################
-
-    def checkForUpdates(self):
-        self.updater.checkForUpdate()
-
-    def updatePlugin(self):
-        self.updater.update()
-
-    def forceUpdate(self):
-        self.updater.update(currentVersion='0.0.0')
 
     def clearSMTPQueueMenu(self, valuesDict, typeId):
         try:
