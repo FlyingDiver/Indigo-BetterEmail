@@ -198,11 +198,12 @@ class Plugin(indigo.PluginBase):
 
             newProps["devVersCount"] = kCurDevVersCount
             device.replacePluginPropsOnServer(newProps)
-            device.stateListOrDisplayStateIdChanged()
             self.logger.debug(u"deviceStartComm: Updated " + device.name + " to version " + str(kCurDevVersCount))
 
         else:
             self.logger.error(u"Unknown device version: " + str(instanceVers) + " for device " + device.name)
+
+        device.stateListOrDisplayStateIdChanged()
 
         if len(device.pluginProps) < 3:
             self.logger.error(u"Server \"%s\" is misconfigured - disabling" % device.name)

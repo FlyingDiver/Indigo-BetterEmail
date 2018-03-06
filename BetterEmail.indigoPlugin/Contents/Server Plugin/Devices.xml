@@ -68,6 +68,16 @@
                 <TriggerLabel>Message From</TriggerLabel>
                 <ControlPageLabel>Message From</ControlPageLabel>
             </State>
+            <State id="messageTo">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message To</TriggerLabel>
+                <ControlPageLabel>Message To</ControlPageLabel>
+            </State>
+            <State id="messageDate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message Date</TriggerLabel>
+                <ControlPageLabel>Message Date</ControlPageLabel>
+            </State>
             <State id="regexMatch">
                 <ValueType>String</ValueType>
                 <TriggerLabel>RegEx Match Result</TriggerLabel>
@@ -138,6 +148,11 @@
                 <ValueType>String</ValueType>
                 <TriggerLabel>Message From</TriggerLabel>
                 <ControlPageLabel>Message From</ControlPageLabel>
+            </State>
+            <State id="messageTo">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message To</TriggerLabel>
+                <ControlPageLabel>Message To</ControlPageLabel>
             </State>
             <State id="regexMatch">
                 <ValueType>String</ValueType>

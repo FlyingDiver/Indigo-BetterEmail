@@ -86,7 +86,7 @@ class POPServer(object):
                             messageSubject = bytes.decode(encoding)
                         else:
                             messageSubject = message.get("Subject")
-                        self.logger.debug(self.device.name + u": Received Message Subject: " + messageSubject)
+                        self.logger.info(self.device.name + u": Received Message Subject: " + messageSubject)
                     except Exception, e:
                         self.logger.error(self.device.name + u': Error decoding "Subject:" header: %s, error: %s' % (str(message.get("Subject")), str(e)))
                         messageSubject = ""
@@ -97,7 +97,7 @@ class POPServer(object):
                             messageFrom = bytes.decode(encoding)
                         else:
                             messageFrom = message.get("From")
-                        self.logger.debug(u"Received Message From: " + messageFrom)
+                        self.logger.info(u"Received Message From: " + messageFrom)
                     except Exception, e:
                         self.logger.error(self.device.name + u': Error decoding "From:" header: %s, error: %s' % (str(message.get("From")), str(e)))
                         messageFrom = ""
@@ -108,14 +108,25 @@ class POPServer(object):
                             messageTo = bytes.decode(encoding)
                         else:
                             messageTo = message.get("To")
-                        self.logger.debug(self.device.name + u": Received Message To: " + messageTo)
+                        self.logger.info(self.device.name + u": Received Message To: " + messageTo)
                     except Exception, e:
                         self.logger.error(self.device.name + u': Error decoding "To:" header: %s, error: %s' % (str(message.get("To")), str(e)))
                         messageTo = ""
 
                     try:
+                        bytes, encoding = decode_header(message.get("Date"))[0]
+                        if encoding:
+                            messageDate = bytes.decode(encoding)
+                        else:
+                            messageDate = message.get("Date")
+                        self.logger.info(self.device.name + u": Received Message Date: " + messageDate)
+                    except Exception, e:
+                        self.logger.debug(self.device.name + 'Error decoding "Date:" "%s", error: %s' % (str(message.get("Date")), str(e)))
+                        messageDate = ""
+
+                    try:
                         if message.is_multipart():
-                            self.logger.threaddebug(self.device.name + u": checkMsgs: Decoding multipart message')
+                            self.logger.threaddebug(self.device.name + u": checkMsgs: Decoding multipart message")
                             for part in message.walk():
                                 type = part.get_content_type()
                                 self.logger.threaddebug('\tfound type: %s' % type)
@@ -142,13 +153,15 @@ class POPServer(object):
 
                     stateList = [
                                 {'key':'messageFrom',   'value':messageFrom},
+                                {'key':'messageTo',     'value':messageTo},
                                 {'key':'messageSubject','value':messageSubject},
+                                {'key':'messageDate',   'value':messageDate},
                                 {'key':'messageText',   'value':messageText},
                                 {'key':'lastMessage',   'value':uidl}
                     ]
                     self.logger.threaddebug(self.device.name + u': checkMsgs: Updating states on server: %s' % str(stateList))
                     self.device.updateStatesOnServer(stateList)
-                    broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}
+                    broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageDate': messageDate, 'messageText': messageText}
                     indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
                     indigo.activePlugin.triggerCheck(self.device)
 

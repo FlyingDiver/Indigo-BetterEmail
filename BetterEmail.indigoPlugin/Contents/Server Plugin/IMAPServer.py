@@ -154,7 +154,7 @@ class IMAPServer(object):
                     messageSubject = bytes.decode(encoding)
                 else:
                     messageSubject = message.get("Subject")
-                self.logger.debug(self.device.name + u": Received Message Subject: " + messageSubject)
+                self.logger.info(self.device.name + u": Received Message Subject: " + messageSubject)
             except Exception, e:
                 self.logger.debug(self.device.name + 'Error decoding "Subject:" "%s", error: %s' % (str(message.get("Subject")), str(e)))
                 messageSubject = ""
@@ -165,7 +165,7 @@ class IMAPServer(object):
                     messageFrom = bytes.decode(encoding)
                 else:
                     messageFrom = message.get("From")
-                self.logger.debug(self.device.name + u": Received Message From: " + messageFrom)
+                self.logger.info(self.device.name + u": Received Message From: " + messageFrom)
             except Exception, e:
                 self.logger.debug(self.device.name + 'Error decoding "From:" "%s", error: %s' % (str(message.get("From")), str(e)))
                 messageFrom = ""
@@ -176,10 +176,21 @@ class IMAPServer(object):
                     messageTo = bytes.decode(encoding)
                 else:
                     messageTo = message.get("To")
-                self.logger.debug(self.device.name + u": Received Message To: " + messageTo)
+                self.logger.info(self.device.name + u": Received Message To: " + messageTo)
             except Exception, e:
                 self.logger.debug(self.device.name + 'Error decoding "To:" "%s", error: %s' % (str(message.get("To")), str(e)))
                 messageTo = ""
+
+            try:
+                bytes, encoding = decode_header(message.get("Date"))[0]
+                if encoding:
+                    messageDate = bytes.decode(encoding)
+                else:
+                    messageDate = message.get("Date")
+                self.logger.info(self.device.name + u": Received Message Date: " + messageDate)
+            except Exception, e:
+                self.logger.debug(self.device.name + 'Error decoding "Date:" "%s", error: %s' % (str(message.get("Date")), str(e)))
+                messageDate = ""
 
             try:
                 messageID = message.get("Message-Id")
@@ -217,14 +228,16 @@ class IMAPServer(object):
 
             stateList = [
                         {'key':'messageFrom',   'value':messageFrom},
+                        {'key':'messageTo',     'value':messageTo},
                         {'key':'messageSubject','value':messageSubject},
+                        {'key':'messageDate',   'value':messageDate},
                         {'key':'messageText',   'value':messageText},
                         {'key':'lastMessage',   'value':messageID}
             ]
             self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
             self.device.updateStatesOnServer(stateList)
             indigo.activePlugin.triggerCheck(self.device)
-            broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageText': messageText}
+            broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageDate': messageDate, 'messageText': messageText}
             indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
 
             # If configured to do so, delete the message, otherwise mark it as processed
