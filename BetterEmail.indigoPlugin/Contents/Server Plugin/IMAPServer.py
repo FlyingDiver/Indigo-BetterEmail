@@ -256,9 +256,19 @@ class IMAPServer(object):
         if self.imapProps['useIDLE']:
             if time.time() > (self.lastIDLE + 3600.0):   # if we go an hour without an IDLE event, reconnect
                 self.logger.warning(self.device.name + u": IDLE Event Timeout, reconnecting")
-                self.connection.close()
-                self.connection.logout()
-                self.connect()        
+                try:
+                    self.connection.close()
+                except:
+                    self.logger.warning(self.device.name + u": error doing close()")
+                try:
+                    self.connection.logout()
+                except:
+                    self.logger.warning(self.device.name + u": error doing logout()")
+                
+                try:
+                    self.connect()        
+                except:
+                    self.logger.warning(self.device.name + u": error doing connect()")
         
         counter = int(self.device.pluginProps['pollingFrequency'])
         if counter == 0:  # no polling for frequency = 0
