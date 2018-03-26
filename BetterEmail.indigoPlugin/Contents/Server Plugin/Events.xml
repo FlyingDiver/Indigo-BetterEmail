@@ -48,4 +48,13 @@
             </Field>
         </ConfigUI>
     </Event>
+    <Event id="connError">
+        <Name>Server Connection Error</Name>
+        <ConfigUI>
+            <Field id="serverID" type="menu">
+                <Label>Select Server:</Label>
+                <List class="self" filter="" method="pickAnyServer"  dynamicReload="true"/>
+            </Field>            
+        </ConfigUI>
+    </Event>
 </Events>

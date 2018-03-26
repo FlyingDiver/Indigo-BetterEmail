@@ -135,7 +135,8 @@ class SMTPServer(object):
             self.logger.error(self.device.name + u": SMTP server connection error: " + str(e))
             smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
             smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-            return False
+            indigo.activePlugin.connErrorTriggerCheck(self.device)
+           return False
 
         else:
 

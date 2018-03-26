@@ -185,3 +185,5 @@ class POPServer(object):
             self.logger.error(self.device.name + u": POP server connection error: " + str(e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+            indigo.activePlugin.connErrorTriggerCheck(self.device)
+            

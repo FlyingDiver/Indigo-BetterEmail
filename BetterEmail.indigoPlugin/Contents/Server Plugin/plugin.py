@@ -109,7 +109,7 @@ class Plugin(indigo.PluginBase):
         del self.triggers[trigger.id]
 
     def triggerCheck(self, device):
-        self.logger.debug("Checking Triggers for Device %s (%d)" % (device.name, device.id))
+        self.logger.debug("triggerCheck: Checking Triggers for Device %s (%d)" % (device.name, device.id))
 
         for triggerId, trigger in sorted(self.triggers.iteritems()):
             self.logger.debug("\tChecking Trigger %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
@@ -129,6 +129,7 @@ class Plugin(indigo.PluginBase):
                         indigo.trigger.execute(trigger)
                     else:
                         self.logger.debug("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+                        
                 elif trigger.pluginTypeId == "stringMatch":
                     field = trigger.pluginProps["fieldPopUp"]
                     pattern = trigger.pluginProps["stringPattern"]
@@ -138,6 +139,28 @@ class Plugin(indigo.PluginBase):
                         indigo.trigger.execute(trigger)
                     else:
                         self.logger.debug("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+
+                elif trigger.pluginTypeId == "connError":
+                    self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                    indigo.trigger.execute(trigger)
+
+                else:
+                    self.logger.debug(
+                        "\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+
+            else:
+                self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
+
+    def connErrorTriggerCheck(self, device):
+        self.logger.debug("connErrorTriggerCheck: Checking Triggers for Device %s (%d)" % (device.name, device.id))
+
+        for triggerId, trigger in sorted(self.triggers.iteritems()):
+            self.logger.debug("\tChecking Trigger %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+
+                if trigger.pluginTypeId == "connError":
+                    self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                    indigo.trigger.execute(trigger)
+
                 else:
                     self.logger.debug(
                         "\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
@@ -329,9 +352,8 @@ class Plugin(indigo.PluginBase):
 
     def pickSMTPServer(self, filter=None, valuesDict=None, typeId=0):
         retList = []
-        for dev in indigo.devices.iter("self"):
-            if dev.deviceTypeId == "smtpAccount":
-                retList.append((dev.id, dev.name))
+        for dev in indigo.devices.iter("self.smtpAccount"):
+            retList.append((dev.id, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
@@ -349,5 +371,12 @@ class Plugin(indigo.PluginBase):
         for dev in indigo.devices.iter("self"):
             if (dev.deviceTypeId == "imapAccount") or (dev.deviceTypeId == "popAccount"):
                 retList.append((dev.id, dev.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    def pickAnyServer(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        retList = [("-1","- Any Server Device -")]
+        for dev in indigo.devices.iter("self"):
+            retList.append((dev.id, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList

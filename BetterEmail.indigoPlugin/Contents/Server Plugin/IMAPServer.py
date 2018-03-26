@@ -29,10 +29,10 @@ class IMAPServer(object):
 
         if self.imapProps['useIDLE']:
             self.logger.debug(self.device.name + u": Starting IDLE connection")
-            self.connect()
-            self.thread = Thread(target=self.idle)
-            self.event = Event()
-            self.thread.start()
+            self.connectIMAP()
+            self.idleThread = Thread(target=self.idleIMAP)
+            self.idleLoopEvent = Event()
+            self.idleThread.start()
             self.msgLock = Lock()
             self.lastIDLE = time.time()
             self.checkMsgs()
@@ -46,18 +46,21 @@ class IMAPServer(object):
         if self.imapProps['useIDLE']:
             try:
                 self.logger.debug(self.device.name + u": Stopping IDLE connection")
-                self.event.set()
+                self.idleLoopEvent.set()
                 self.connection.close()
                 self.connection.logout()
             except Exception, e:
                 self.logger.error(u"IMAP IDLE server shutdown error: " + str(e))
+                indigo.activePlugin.connErrorTriggerCheck(self.device)
             
-    def connect(self):
+    def connectIMAP(self):
         try:
             self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
             if self.imapProps['encryptionType'] == 'SSL':
                 self.connection = imaplib2.IMAP4_SSL(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
+                self.logger.debug(self.device.name + u": Doing login()")
                 self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
+                self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
                 self.connection.select("INBOX")
 
             elif self.imapProps['encryptionType'] == 'StartTLS':
@@ -71,7 +74,9 @@ class IMAPServer(object):
 
             elif self.imapProps['encryptionType'] == 'None':
                 self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
+                self.logger.debug(self.device.name + u": Doing login()")
                 self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
+                self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
                 self.connection.select("INBOX")
 
             else:
@@ -80,32 +85,35 @@ class IMAPServer(object):
                 
         except Exception, e:
             self.logger.error(self.device.name + ': Error connecting to IMAP server: ' + str(e))
+            indigo.activePlugin.connErrorTriggerCheck(self.device)
             raise
 
-    def idle(self):
-        self.logger.debug(self.device.name + u": idle() called")
+    # run IDLE loop in separate thread
+    # when this function exits, the IDLE thread terminates
 
-        def callback(args):
+    def idleIMAP(self):
+        self.logger.debug(self.device.name + u": idleIMAP() called")
+
+        def idleEvent(args):
             self.logger.debug(self.device.name + u": IDLE Event Received")
             self.lastIDLE = time.time()
-            if not self.event.isSet():
+            if not self.idleLoopEvent.isSet():
                 self.needsync = True
-                self.event.set()
+                self.idleLoopEvent.set()
 
         while True:
-            if self.event.isSet():
+            if self.idleLoopEvent.isSet():
                 self.logger.debug(self.device.name + u": IDLE Thread Exiting")
                 return
             self.needsync = False
 
-            self.connection.idle(callback=callback)
-            self.event.wait()
+            self.connection.idle(callback=idleEvent)
+            self.idleLoopEvent.wait()
 
             if self.needsync:
-                self.event.clear()
+                self.idleLoopEvent.clear()
                 with self.msgLock:
                     self.checkMsgs()
-
 
     def checkMsgs(self):
         
@@ -258,9 +266,15 @@ class IMAPServer(object):
                 
                 try:
                     self.logger.debug(self.device.name + u": Trying to connect again")
-                    self.connect()        
+                    self.connectIMAP()        
                 except:
-                    self.logger.warning(self.device.name + u": error doing connect()")
+                    self.logger.warning(self.device.name + u": error doing connectIMAP()")
+                    
+                # force the background thread to reconnect
+                
+                self.needsync = True
+                self.idleLoopEvent.set()
+                
         
         counter = int(self.device.pluginProps['pollingFrequency'])
         if counter == 0:  # no polling for frequency = 0
@@ -280,7 +294,7 @@ class IMAPServer(object):
         self.logger.debug(self.device.name + u": Polling IMAP Server")
 
         try:
-            self.connect()
+            self.connectIMAP()
             self.checkMsgs()
 
             # close the connection and log out
