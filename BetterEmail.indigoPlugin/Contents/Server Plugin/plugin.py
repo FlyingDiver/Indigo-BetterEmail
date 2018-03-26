@@ -114,9 +114,8 @@ class Plugin(indigo.PluginBase):
         for triggerId, trigger in sorted(self.triggers.iteritems()):
             self.logger.debug("\tChecking Trigger %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
-            if trigger.pluginProps["serverID"] != str(device.id):
-                self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
-            else:
+            if (trigger.pluginProps["serverID"] == str(device.id)) or (trigger.pluginProps["serverID"] == "-1"):
+
                 if trigger.pluginTypeId == "regexMatch":
                     field = trigger.pluginProps["fieldPopUp"]
                     pattern = trigger.pluginProps["regexPattern"]
@@ -143,7 +142,8 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(
                         "\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
-                # pattern matching here
+            else:
+                self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
 
     ####################
     def validatePrefsConfigUi(self, valuesDict):
@@ -345,7 +345,7 @@ class Plugin(indigo.PluginBase):
         self.serverDict[device.deviceId].poll()
 
     def pickInboundServer(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        retList = []
+        retList = [("-1","- Any IMAP/POP Server -")]
         for dev in indigo.devices.iter("self"):
             if (dev.deviceTypeId == "imapAccount") or (dev.deviceTypeId == "popAccount"):
                 retList.append((dev.id, dev.name))

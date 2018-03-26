@@ -28,6 +28,7 @@ class IMAPServer(object):
         self.pollCounter = 0  # check on first pass
 
         if self.imapProps['useIDLE']:
+            self.logger.debug(self.device.name + u": Starting IDLE connection")
             self.connect()
             self.thread = Thread(target=self.idle)
             self.event = Event()
@@ -44,25 +45,13 @@ class IMAPServer(object):
         self.logger.debug(self.device.name + u": shutting down")
         if self.imapProps['useIDLE']:
             try:
+                self.logger.debug(self.device.name + u": Stopping IDLE connection")
                 self.event.set()
                 self.connection.close()
                 self.connection.logout()
             except Exception, e:
                 self.logger.error(u"IMAP IDLE server shutdown error: " + str(e))
             
-    def reconnect(self):
-        self.logger.debug(self.device.name + u": Resetting connection for IDLE IMAP Server")
-        try:
-            self.connection.close()
-            self.connection.logout()
-            self.connect()
-            self.thread = Thread(target=self.idle)
-            self.event = Event()
-            self.thread.start()
-            self.msgLock = Lock()
-        except Exception, e:
-            self.logger.error(u"IMAP IDLE server reconnection error: " + str(e))
-
     def connect(self):
         try:
             self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
@@ -136,7 +125,7 @@ class IMAPServer(object):
                         self.logger.debug(self.device.name + u"%s: Message # %s already seen, skipping..." % (self.device.name, messageNum))
                         continue
                 except Exception, e:
-                    self.logger.error(self.device.name + ': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
+                    self.logger.error(self.device.name + u': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
                     pass
 
             try:
@@ -145,7 +134,7 @@ class IMAPServer(object):
                 parser = Parser()
                 message = parser.parsestr(data[0][1])
             except Exception, e:
-                self.logger.error('Error fetching Message # ' + messageNum + ": " + str(e))
+                self.logger.error(self.device.name + u': ErrorError fetching Message # ' + messageNum + ": " + str(e))
                 pass
 
             try:
@@ -156,7 +145,7 @@ class IMAPServer(object):
                     messageSubject = message.get("Subject")
                 self.logger.info(self.device.name + u": Received Message Subject: " + messageSubject)
             except Exception, e:
-                self.logger.debug(self.device.name + 'Error decoding "Subject:" "%s", error: %s' % (str(message.get("Subject")), str(e)))
+                self.logger.debug(self.device.name + u': Error decoding "Subject:" "%s", error: %s' % (str(message.get("Subject")), str(e)))
                 messageSubject = ""
 
             try:
@@ -167,7 +156,7 @@ class IMAPServer(object):
                     messageFrom = message.get("From")
                 self.logger.info(self.device.name + u": Received Message From: " + messageFrom)
             except Exception, e:
-                self.logger.debug(self.device.name + 'Error decoding "From:" "%s", error: %s' % (str(message.get("From")), str(e)))
+                self.logger.debug(self.device.name + u': Error decoding "From:" "%s", error: %s' % (str(message.get("From")), str(e)))
                 messageFrom = ""
 
             try:
@@ -178,7 +167,7 @@ class IMAPServer(object):
                     messageTo = message.get("To")
                 self.logger.info(self.device.name + u": Received Message To: " + messageTo)
             except Exception, e:
-                self.logger.debug(self.device.name + 'Error decoding "To:" "%s", error: %s' % (str(message.get("To")), str(e)))
+                self.logger.debug(self.device.name + u': Error decoding "To:" "%s", error: %s' % (str(message.get("To")), str(e)))
                 messageTo = ""
 
             try:
@@ -189,7 +178,7 @@ class IMAPServer(object):
                     messageDate = message.get("Date")
                 self.logger.info(self.device.name + u": Received Message Date: " + messageDate)
             except Exception, e:
-                self.logger.debug(self.device.name + 'Error decoding "Date:" "%s", error: %s' % (str(message.get("Date")), str(e)))
+                self.logger.debug(self.device.name + u': Error decoding "Date:" "%s", error: %s' % (str(message.get("Date")), str(e)))
                 messageDate = ""
 
             try:
@@ -257,15 +246,18 @@ class IMAPServer(object):
             if time.time() > (self.lastIDLE + 3600.0):   # if we go an hour without an IDLE event, reconnect
                 self.logger.warning(self.device.name + u": IDLE Event Timeout, reconnecting")
                 try:
+                    self.logger.debug(self.device.name + u": closing connection")
                     self.connection.close()
                 except:
                     self.logger.warning(self.device.name + u": error doing close()")
                 try:
+                    self.logger.debug(self.device.name + u": logging out of connection")
                     self.connection.logout()
                 except:
                     self.logger.warning(self.device.name + u": error doing logout()")
                 
                 try:
+                    self.logger.debug(self.device.name + u": Trying to connect again")
                     self.connect()        
                 except:
                     self.logger.warning(self.device.name + u": error doing connect()")

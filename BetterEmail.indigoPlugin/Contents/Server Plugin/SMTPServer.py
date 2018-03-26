@@ -13,6 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import Charset
 from email.header import Header
+from email.utils import formatdate
 
 from Queue import Queue
 
@@ -100,7 +101,7 @@ class SMTPServer(object):
         msg = addheader(msg, 'To', emailTo)
         msg = addheader(msg, 'Cc', emailCC)
         msg = addheader(msg, 'Bcc', emailBCC)
-
+        msg = addheader(msg, 'Date', formatdate(localtime=True))
         try:
             if smtpProps['encryptionType'] == 'SSL':
                 connection = smtplib.SMTP_SSL(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
