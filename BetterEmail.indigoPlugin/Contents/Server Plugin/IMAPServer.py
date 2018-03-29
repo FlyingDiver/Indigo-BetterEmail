@@ -12,7 +12,7 @@ from email.Parser import Parser
 from email import Charset
 from email.header import decode_header
 
-from Queue import Queue
+#from Queue import Queue
 from threading import Thread, Event, Lock
 
 import indigo
@@ -25,18 +25,18 @@ class IMAPServer(object):
         self.logger = logging.getLogger("Plugin.IMAPServer")
         self.device = device
         self.imapProps = self.device.pluginProps
-        self.pollCounter = 0  # check on first pass
+        self.logger.debug(self.device.name + u": Creating IMAP Server")
 
         if self.imapProps['useIDLE']:
-            self.logger.debug(self.device.name + u": Starting IDLE connection")
-            self.connectIMAP()
-            self.idleThread = Thread(target=self.idleIMAP)
+            self.logger.debug(self.device.name + u": Using IMAP IDLE")
+            self.connectionLock = Lock()
             self.idleLoopEvent = Event()
-            self.idleThread.start()
-            self.msgLock = Lock()
             self.lastIDLE = time.time()
-            self.checkMsgs()
-
+            self.connectIMAP()
+            self.needsync = False
+            self.exitIDLE = False
+            self.idleThread = Thread(target=self.idleIMAP)
+            self.idleThread.start()
 
     def __str__(self):
         return self.status
@@ -46,12 +46,66 @@ class IMAPServer(object):
         if self.imapProps['useIDLE']:
             try:
                 self.logger.debug(self.device.name + u": Stopping IDLE connection")
+                self.exitIDLE = True
                 self.idleLoopEvent.set()
                 self.connection.close()
                 self.connection.logout()
             except Exception, e:
-                self.logger.error(u"IMAP IDLE server shutdown error: " + str(e))
+                self.logger.error(self.device.name + u": IMAP IDLE server shutdown error: " + str(e))
                 indigo.activePlugin.connErrorTriggerCheck(self.device)
+            
+    def pollCheck(self):
+
+        if self.imapProps['useIDLE']:
+
+            if time.time() > (self.lastIDLE + 3600.0):      # if we go an hour without an IDLE event, reconnect
+                self.logger.warning(self.device.name + u": IDLE Event Timeout, reconnecting")                
+                indigo.activePlugin.restartQueue.put(self.device.id)
+                                                
+            if self.needsync:
+                self.needsync= False
+                return True
+            else:
+                return False
+        
+        # not IDLE, do normal poll check
+        else:              
+            now = time.time()
+            if now > self.next_poll:
+                self.next_poll = now + float(self.imapProps.get('pollingFrequency', "15")) * 60.0
+                return True
+            else:
+                return False
+
+    def poll(self):
+        self.logger.debug(self.device.name + u": Polling IMAP Server")
+
+        if self.imapProps['useIDLE']:
+            with self.connectionLock:
+                try:
+                    self.checkMsgs()
+                except Exception, e:
+                    self.logger.error(u"IMAP checkMsgs error: " + str(e))
+                    
+            return
+
+        try:
+            self.connectIMAP()
+            with self.connectionLock:
+                self.checkMsgs()
+
+            # close the connection and log out
+            self.device.updateStateOnServer(key="serverStatus", value="Success")
+            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+            self.connection.close()
+            self.connection.logout()
+            self.logger.debug(u"\tLogged out from IMAP server: " + self.device.name)
+            
+        except Exception, e:
+            self.logger.error(u"IMAP server connection error: " + str(e))
+            self.device.updateStateOnServer(key="serverStatus", value="Failure")
+            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+            
             
     def connectIMAP(self):
         try:
@@ -88,8 +142,8 @@ class IMAPServer(object):
             indigo.activePlugin.connErrorTriggerCheck(self.device)
             raise
 
-    # run IDLE loop in separate thread
-    # when this function exits, the IDLE thread terminates
+    ##########################################################################################
+    # run IDLE loop in separate thread.  When this function exits, the IDLE thread terminates
 
     def idleIMAP(self):
         self.logger.debug(self.device.name + u": idleIMAP() called")
@@ -97,34 +151,32 @@ class IMAPServer(object):
         def idleEvent(args):
             self.logger.debug(self.device.name + u": IDLE Event Received")
             self.lastIDLE = time.time()
-            if not self.idleLoopEvent.isSet():
+            if not self.exitIDLE and not self.connectionLock.locked():
                 self.needsync = True
-                self.idleLoopEvent.set()
+            self.idleLoopEvent.set()
 
         while True:
-            if self.idleLoopEvent.isSet():
-                self.logger.debug(self.device.name + u": IDLE Thread Exiting")
-                return
-            self.needsync = False
 
             self.connection.idle(callback=idleEvent)
             self.idleLoopEvent.wait()
+            self.idleLoopEvent.clear()
 
-            if self.needsync:
-                self.idleLoopEvent.clear()
-                with self.msgLock:
-                    self.checkMsgs()
+            if self.exitIDLE:
+                self.logger.debug(self.device.name + u": IDLE Thread Exiting")
+                return
+    
+    ##########################################################################################
 
     def checkMsgs(self):
         
-        self.logger.debug(self.device.name + u": Doing checkMsgs")
+        self.logger.debug(u"{}: Doing checkMsgs".format(self.device.name))
         typ, msg_ids = self.connection.search(None, 'ALL')
         self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
         if msg_ids == None:
+            self.logger.debug(u"{}: checkMsgs - No messages".format(self.device.name))
             return
             
         for messageNum in msg_ids[0].split():
-            self.logger.debug(self.device.name + u": Checking Message # " + messageNum)
             
             if not self.imapProps['checkSeen']:         # only check for IndigoProcessed flag if we're not processing all messages
                 try:
@@ -142,7 +194,7 @@ class IMAPServer(object):
                 parser = Parser()
                 message = parser.parsestr(data[0][1])
             except Exception, e:
-                self.logger.error(self.device.name + u': ErrorError fetching Message # ' + messageNum + ": " + str(e))
+                self.logger.error(self.device.name + u': Error fetching Message # ' + messageNum + ": " + str(e))
                 pass
 
             try:
@@ -233,77 +285,20 @@ class IMAPServer(object):
             ]
             self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
             self.device.updateStatesOnServer(stateList)
+            
             indigo.activePlugin.triggerCheck(self.device)
+            
             broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageDate': messageDate, 'messageText': messageText}
             indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
 
             # If configured to do so, delete the message, otherwise mark it as processed
             if self.imapProps['delete']:
-                self.logger.debug(u"Deleting message # " + messageNum)
+                self.logger.debug(u"{}: Deleting message # {}".format(self.device.name,messageNum))
                 t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
             else:
                 # Mark the message as successfully processed
                 t, resp = self.connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
 
         self.connection.expunge()
+        self.logger.debug(u"{}: checkMsgs complete".format(self.device.name))
 
-    def pollCheck(self):
-
-        #  check to see if we need to reconnect
-        if self.imapProps['useIDLE']:
-            if time.time() > (self.lastIDLE + 3600.0):   # if we go an hour without an IDLE event, reconnect
-                self.logger.warning(self.device.name + u": IDLE Event Timeout, reconnecting")
-                try:
-                    self.logger.debug(self.device.name + u": closing connection")
-                    self.connection.close()
-                except:
-                    self.logger.warning(self.device.name + u": error doing close()")
-                try:
-                    self.logger.debug(self.device.name + u": logging out of connection")
-                    self.connection.logout()
-                except:
-                    self.logger.warning(self.device.name + u": error doing logout()")
-                
-                try:
-                    self.logger.debug(self.device.name + u": Trying to connect again")
-                    self.connectIMAP()        
-                except:
-                    self.logger.warning(self.device.name + u": error doing connectIMAP()")
-                    
-                # force the background thread to reconnect
-                
-                self.needsync = True
-                self.idleLoopEvent.set()
-                
-        
-        counter = int(self.device.pluginProps['pollingFrequency'])
-        if counter == 0:  # no polling for frequency = 0
-            return False
-
-        self.pollCounter -= 1
-        if self.pollCounter <= 0:
-            self.pollCounter = counter
-            return True
-        else:
-            return False
-
-    def poll(self):
-        if self.imapProps['useIDLE']:
-            return
-
-        self.logger.debug(self.device.name + u": Polling IMAP Server")
-
-        try:
-            self.connectIMAP()
-            self.checkMsgs()
-
-            # close the connection and log out
-            self.device.updateStateOnServer(key="serverStatus", value="Success")
-            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-            self.connection.close()
-            self.connection.logout()
-            self.logger.debug(u"\tLogged out from IMAP server: " + self.device.name)
-        except Exception, e:
-            self.logger.error(u"IMAP server connection error: " + str(e))
-            self.device.updateStateOnServer(key="serverStatus", value="Failure")
-            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)

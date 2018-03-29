@@ -3,6 +3,7 @@
 ####################
 # Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
+import time
 import ssl
 import smtplib
 import logging
@@ -32,14 +33,36 @@ class SMTPServer(object):
     def __init__(self, device):
         self.logger = logging.getLogger("Plugin.SMTPServer")
         self.device = device
+        self.smtpProps = self.device.pluginProps
         self.smtpQ = Queue()
-        self.pollCounter = 0  # check on first pass
+        self.next_poll = time.time()
 
     def __str__(self):
         return self.status
 
     def shutDown(self):
         self.logger.debug(self.device.name + u": shutting down")
+
+    def pollCheck(self):
+        pollingFrequency = int(self.smtpProps.get('pollingFrequency', "15"))
+        if pollingFrequency == 0:
+            return False
+            
+        now = time.time()
+        if now > self.next_poll:
+            self.next_poll = now + float(pollingFrequency) * 60.0
+            return True
+        else:
+            return False
+
+
+    def poll(self):
+        self.logger.debug(self.device.name + u": SMTP poll, " + str(self.smtpQ.qsize()) + u" items in queue")
+        while not self.smtpQ.empty():
+            action = self.smtpQ.get(False)
+            if not self.smtpSend(action):
+                self.smtpQ.put(action)  # put back in queue if sending fails
+                return
 
     def clearQueue(self):
         self.smtpQ = Queue()  # just nuke the old queue and replace it
@@ -50,10 +73,7 @@ class SMTPServer(object):
         # base64, and instead use quoted-printable.
         Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
 
-        self.logger.debug(self.device.name + u": Sending an email")
-
         smtpDevice = indigo.devices[pluginAction.deviceId]
-        smtpProps = smtpDevice.pluginProps
 
         if "emailTo" in pluginAction.props:
             emailTo = indigo.activePlugin.substitute(pluginAction.props["emailTo"])
@@ -94,7 +114,7 @@ class SMTPServer(object):
                     msg.attach(part)
 
         toAddresses = emailTo.split(",") + emailCC.split(",") + emailBCC.split(",")
-        emailFrom = smtpProps["fromAddress"]
+        emailFrom = self.smtpProps["fromAddress"]
 
         msg = addheader(msg, 'From', emailFrom)
         msg = addheader(msg, 'Subject', emailSubject)
@@ -102,33 +122,36 @@ class SMTPServer(object):
         msg = addheader(msg, 'Cc', emailCC)
         msg = addheader(msg, 'Bcc', emailBCC)
         msg = addheader(msg, 'Date', formatdate(localtime=True))
+        
+        self.logger.info(u"{}: Sending email '{}' to '{}'".format(self.device.name, emailSubject, emailTo))
+
         try:
-            if smtpProps['encryptionType'] == 'SSL':
-                connection = smtplib.SMTP_SSL(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
+            if self.smtpProps['encryptionType'] == 'SSL':
+                connection = smtplib.SMTP_SSL(self.smtpProps['address'].encode('ascii', 'ignore'), int(self.smtpProps['hostPort']))
                 connection.ehlo()
-                connection.login(smtpProps["serverLogin"].encode('ascii', 'ignore'), smtpProps["serverPassword"].encode('ascii', 'ignore'))
+                connection.login(self.smtpProps["serverLogin"].encode('ascii', 'ignore'), self.smtpProps["serverPassword"].encode('ascii', 'ignore'))
                 connection.sendmail(emailFrom, toAddresses, msg.as_string())
                 connection.quit()
 
-            elif smtpProps['encryptionType'] == 'StartTLS':
-                connection = smtplib.SMTP(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
+            elif self.smtpProps['encryptionType'] == 'StartTLS':
+                connection = smtplib.SMTP(self.smtpProps['address'].encode('ascii', 'ignore'), int(self.smtpProps['hostPort']))
                 connection.ehlo()
                 connection.starttls()
                 connection.ehlo()
-                connection.login(smtpProps["serverLogin"].encode('ascii', 'ignore'), smtpProps["serverPassword"].encode('ascii', 'ignore'))
+                connection.login(self.smtpProps["serverLogin"].encode('ascii', 'ignore'), self.smtpProps["serverPassword"].encode('ascii', 'ignore'))
                 connection.sendmail(emailFrom, toAddresses, msg.as_string())
                 connection.quit()
 
-            elif smtpProps['encryptionType'] == 'None':
-                connection = smtplib.SMTP(smtpProps['address'].encode('ascii', 'ignore'), int(smtpProps['hostPort']))
+            elif self.smtpProps['encryptionType'] == 'None':
+                connection = smtplib.SMTP(self.smtpProps['address'].encode('ascii', 'ignore'), int(self.smtpProps['hostPort']))
                 connection.ehlo()
-                if (len(smtpProps["serverLogin"]) > 0) and (len(smtpProps["serverPassword"]) > 0):
-                    connection.login(smtpProps["serverLogin"].encode('ascii', 'ignore'), smtpProps["serverPassword"].encode('ascii', 'ignore'))
+                if (len(self.smtpProps["serverLogin"]) > 0) and (len(self.smtpProps["serverPassword"]) > 0):
+                    connection.login(self.smtpProps["serverLogin"].encode('ascii', 'ignore'), self.smtpProps["serverPassword"].encode('ascii', 'ignore'))
                 connection.sendmail(emailFrom, toAddresses, msg.as_string())
                 connection.quit()
 
             else:
-                self.logger.error(u"Unknown encryption type: " + smtpProps['encryptionType'])
+                self.logger.error(u"Unknown encryption type: " + self.smtpProps['encryptionType'])
                 return False
 
         except Exception, e:
@@ -136,7 +159,7 @@ class SMTPServer(object):
             smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
             smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             indigo.activePlugin.connErrorTriggerCheck(self.device)
-           return False
+            return False
 
         else:
 
@@ -149,22 +172,3 @@ class SMTPServer(object):
             return True
 
 
-    def pollCheck(self):
-        counter = int(self.device.pluginProps['pollingFrequency'])
-        if counter == 0:  # no polling for frequency = 0
-            return False
-
-        self.pollCounter -= 1
-        if self.pollCounter <= 0:
-            self.pollCounter = counter
-            return True
-        else:
-            return False
-
-    def poll(self):
-        self.logger.debug(self.device.name + u": SMTP poll, " + str(self.smtpQ.qsize()) + u" items in queue")
-        while not self.smtpQ.empty():
-            action = self.smtpQ.get(False)
-            if not self.smtpSend(action):
-                self.smtpQ.put(action)  # put back in queue if sending fails
-                return

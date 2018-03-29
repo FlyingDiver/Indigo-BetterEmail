@@ -38,6 +38,8 @@ class Plugin(indigo.PluginBase):
 
         self.serverDict = dict()
         self.triggers = {}
+        self.restartQueue = Queue()
+        
 
     def shutdown(self):
         self.logger.info(u"Shutting down Better Email")
@@ -119,29 +121,29 @@ class Plugin(indigo.PluginBase):
                 if trigger.pluginTypeId == "regexMatch":
                     field = trigger.pluginProps["fieldPopUp"]
                     pattern = trigger.pluginProps["regexPattern"]
-                    self.logger.debug("\tChecking Device State %s for Pattern: %s" % (field, pattern))
+                    self.logger.debug("\t\tChecking Device State %s for Pattern: %s" % (field, pattern))
                     cPattern = re.compile(pattern)
                     match = cPattern.search(device.states[field])
                     if match:
                         regexMatch = match.group()
-                        self.logger.debug("\tExecuting Trigger %s (%d), match: %s" % (trigger.name, trigger.id, regexMatch))
+                        self.logger.debug("\t\tExecuting Trigger %s (%d), match: %s" % (trigger.name, trigger.id, regexMatch))
                         device.updateStateOnServer(key="regexMatch", value=regexMatch)
                         indigo.trigger.execute(trigger)
                     else:
-                        self.logger.debug("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+                        self.logger.debug("\t\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
                         
                 elif trigger.pluginTypeId == "stringMatch":
                     field = trigger.pluginProps["fieldPopUp"]
                     pattern = trigger.pluginProps["stringPattern"]
-                    self.logger.debug("\tChecking Device State %s for string: %s" % (field, pattern))
+                    self.logger.debug("\t\tChecking Device State %s for string: %s" % (field, pattern))
                     if device.states[field] == pattern:
-                        self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                        self.logger.debug("\t\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
                     else:
-                        self.logger.debug("\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
+                        self.logger.debug("\t\tNo Match for Trigger %s (%d)" % (trigger.name, trigger.id))
 
                 elif trigger.pluginTypeId == "connError":
-                    self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
+                    self.logger.debug("\t\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
                     indigo.trigger.execute(trigger)
 
                 else:
@@ -157,13 +159,13 @@ class Plugin(indigo.PluginBase):
         for triggerId, trigger in sorted(self.triggers.iteritems()):
             self.logger.debug("\tChecking Trigger %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
+            if (trigger.pluginProps["serverID"] == str(device.id)) or (trigger.pluginProps["serverID"] == "-1"):
+
                 if trigger.pluginTypeId == "connError":
                     self.logger.debug("\tExecuting Trigger %s (%d)" % (trigger.name, trigger.id))
                     indigo.trigger.execute(trigger)
-
                 else:
-                    self.logger.debug(
-                        "\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                    self.logger.debug("\tUnknown Trigger Type %s (%d), %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 
             else:
                 self.logger.debug("\t\tSkipping Trigger %s (%s), wrong device: %s" % (trigger.name, trigger.id, device.id))
@@ -195,7 +197,7 @@ class Plugin(indigo.PluginBase):
 
         instanceVers = int(device.pluginProps.get('devVersCount', 0))
         if instanceVers >= kCurDevVersCount:
-            self.logger.debug(device.name + u": Device Version is up to date")
+            self.logger.threaddebug(device.name + u": Device Version is up to date")
         elif instanceVers < kCurDevVersCount:
             newProps = device.pluginProps
 
@@ -234,7 +236,7 @@ class Plugin(indigo.PluginBase):
 
         else:
             if device.id not in self.serverDict:
-                self.logger.debug(device.name + u": Starting device")
+                self.logger.debug(u"{}: Starting device ({})".format(device.name, device.deviceTypeId))
                 if device.deviceTypeId == "imapAccount":
                     self.serverDict[device.id] = IMAPServer(device)
                 elif device.deviceTypeId == "popAccount":
@@ -242,7 +244,7 @@ class Plugin(indigo.PluginBase):
                 elif device.deviceTypeId == "smtpAccount":
                     self.serverDict[device.id] = SMTPServer(device)
                 else:
-                    self.logger.error(device.name + u"Unknown device type: " + str(device.deviceTypeId))
+                    self.logger.error(u"{}: Unknown device type: {}".format(device.name, device.deviceTypeId))
             else:
                 self.logger.debug(device.name + u": Duplicate Device ID")
 
@@ -252,11 +254,11 @@ class Plugin(indigo.PluginBase):
     def deviceStopComm(self, device):
         if device.id in self.serverDict:
             devID = device.id
-            self.logger.debug(device.name + u": Stopping device")
+            self.logger.debug(u"{}: Stopping device".format(device.name))
             self.serverDict[devID].shutDown()
             del self.serverDict[devID]
         else:
-            self.logger.debug(device.name + u"Unknown Device ID: " + device.id)
+            self.logger.debug(u"{}: Unknown Device ID: {}".format(device.name, device.id))
 
     ########################################
 
@@ -269,8 +271,14 @@ class Plugin(indigo.PluginBase):
                     if server.pollCheck():
                         server.poll()
 
-                # wait a minute and do it all again.
-                self.sleep(60)
+                while not self.restartQueue.empty():
+                    device = self.restartQueue.get(False)
+                    name = indigo.devices[device].name
+                    self.logger.warning(u"Processing restart request for device '{}'".format(name))
+                    indigo.device.enable(device, value=False)
+                    indigo.device.enable(device, value=True)
+                    
+                self.sleep(1)
 
         except self.StopThread:
             pass
@@ -326,6 +334,16 @@ class Plugin(indigo.PluginBase):
     # Menu Methods
     ########################################
 
+    def serverRestartMenu(self, valuesDict, typeId):
+        try:
+            deviceId = int(valuesDict["targetDevice"])
+        except:
+            self.logger.error(u"Bad Device specified for Restart Server operation")
+            return False
+
+        self.restartQueue.put(deviceId)
+        return True
+
     def clearSMTPQueueMenu(self, valuesDict, typeId):
         try:
             deviceId = int(valuesDict["targetDevice"])
@@ -349,6 +367,13 @@ class Plugin(indigo.PluginBase):
     def clearSMTPQueue(self, device):
         self.logger.debug(u"Clearing SMTP Queue for " + self.serverDict[device.deviceId].device.name)
         self.serverDict[device.deviceId].clearQueue()
+
+    def pickServer(self, filter=None, valuesDict=None, typeId=0):
+        retList = []
+        for dev in indigo.devices.iter("self"):
+            retList.append((dev.id, dev.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
 
     def pickSMTPServer(self, filter=None, valuesDict=None, typeId=0):
         retList = []

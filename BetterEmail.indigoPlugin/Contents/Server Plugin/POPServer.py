@@ -3,6 +3,7 @@
 ####################
 # Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
+import time
 import ssl
 import poplib
 import logging
@@ -11,7 +12,7 @@ from email.Parser import FeedParser
 from email import Charset
 from email.header import decode_header
 
-from Queue import Queue
+#from Queue import Queue
 
 import indigo
 
@@ -21,7 +22,9 @@ class POPServer(object):
     def __init__(self, device):
         self.logger = logging.getLogger("Plugin.POPServer")
         self.device = device
-        self.pollCounter = 0  # check on first pass
+        self.popProps = self.device.pluginProps
+        self.next_poll = time.time()
+
 
     def __str__(self):
         return self.status
@@ -30,16 +33,13 @@ class POPServer(object):
         self.logger.debug(self.device.name + u": shutting down")
 
     def pollCheck(self):
-        counter = int(self.device.pluginProps['pollingFrequency'])
-        if counter == 0:  # no polling for frequency = 0
-            return False
-
-        self.pollCounter -= 1
-        if self.pollCounter <= 0:
-            self.pollCounter = counter
+        now = time.time()
+        if now > self.next_poll:
+            self.next_poll = now + float(self.popProps.get('pollingFrequency', "15")) * 60.0
             return True
         else:
             return False
+
 
     def poll(self):
         self.logger.debug(self.device.name + u": Connecting to POP Server")
@@ -47,25 +47,25 @@ class POPServer(object):
         newMessageList = indigo.List()
 
         try:
-            if self.device.pluginProps['encryptionType'] == 'SSL':
-                connection = poplib.POP3_SSL(self.device.pluginProps['address'].encode('ascii', 'ignore'),
-                                             int(self.device.pluginProps['hostPort']))
-            elif self.device.pluginProps['encryptionType'] == 'None':
-                connection = poplib.POP3(self.device.pluginProps['address'].encode('ascii', 'ignore'),
-                                         int(self.device.pluginProps['hostPort']))
+            if self.popProps['encryptionType'] == 'SSL':
+                connection = poplib.POP3_SSL(self.popProps['address'].encode('ascii', 'ignore'),
+                                             int(self.popProps['hostPort']))
+            elif self.popProps['encryptionType'] == 'None':
+                connection = poplib.POP3(self.popProps['address'].encode('ascii', 'ignore'),
+                                         int(self.popProps['hostPort']))
             else:
-                self.logger.error(self.device.name + u": Unknown encryption type: " + self.device.pluginProps['encryptionType'])
+                self.logger.error(self.device.name + u": Unknown encryption type: " + self.popProps['encryptionType'])
                 return
 
-            connection.user(self.device.pluginProps['serverLogin'])
-            connection.pass_(self.device.pluginProps['serverPassword'])
+            connection.user(self.popProps['serverLogin'])
+            connection.pass_(self.popProps['serverPassword'])
             (numMessages, totalSize) = connection.stat()
             if numMessages == 0:
                 self.logger.debug(self.device.name + u": No messages to process")
 
             for i in range(numMessages):
                 messageNum = i + 1
-                self.logger.debug(self.device.name + u": Retrieving Message # " + str(messageNum))
+                self.logger.debug(self.device.name + u": Fetching Message # " + str(messageNum))
                 try:
                     (server_msg, body, octets) = connection.retr(messageNum)
                     uidl = connection.uidl(messageNum).split()[2]
@@ -166,7 +166,7 @@ class POPServer(object):
                     indigo.activePlugin.triggerCheck(self.device)
 
                     # If configured to do so, delete the message, otherwise mark it as processed
-                    if self.device.pluginProps['delete']:
+                    if self.popProps['delete']:
                         self.logger.debug(self.device.name + u": Deleting Message # " + str(messageNum))
                         connection.dele(messageNum)
 

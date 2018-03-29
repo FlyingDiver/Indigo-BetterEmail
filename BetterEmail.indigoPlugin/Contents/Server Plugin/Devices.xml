@@ -154,6 +154,11 @@
                 <TriggerLabel>Message To</TriggerLabel>
                 <ControlPageLabel>Message To</ControlPageLabel>
             </State>
+            <State id="messageDate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Message Date</TriggerLabel>
+                <ControlPageLabel>Message Date</ControlPageLabel>
+            </State>
             <State id="regexMatch">
                 <ValueType>String</ValueType>
                 <TriggerLabel>RegEx Match Result</TriggerLabel>

@@ -26,4 +26,16 @@
             </Field>
         </ConfigUI>
     </MenuItem>
+
+    <MenuItem id="menu4">
+        <Name>Server Restart (Select Device)</Name>
+        <CallbackMethod>serverRestartMenu</CallbackMethod>
+        <ButtonTitle>Restart</ButtonTitle>
+        <ConfigUI>
+            <Field id="targetDevice" type="menu">
+                <Label>Select Server to restart:</Label>
+                <List class="self" filter="" method="pickServer" dynamicReload="true"/>
+            </Field>
+        </ConfigUI>
+    </MenuItem>
 </MenuItems>
