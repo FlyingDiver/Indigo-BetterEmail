@@ -35,7 +35,7 @@ class IMAPServer(object):
             self.connectIMAP()
             self.needsync = False
             self.exitIDLE = False
-            self.idleThread = Thread(target=self.idleIMAP)
+            self.idleThread = Thread(target=self.idleIMAPThread)
             self.idleThread.start()
 
     def __str__(self):
@@ -145,8 +145,8 @@ class IMAPServer(object):
     ##########################################################################################
     # run IDLE loop in separate thread.  When this function exits, the IDLE thread terminates
 
-    def idleIMAP(self):
-        self.logger.debug(self.device.name + u": idleIMAP() called")
+    def idleIMAPThread(self):
+        self.logger.debug(self.device.name + u": idleIMAPThread() called")
 
         def idleEvent(args):
             self.logger.debug(self.device.name + u": IDLE Event Received")
@@ -170,7 +170,6 @@ class IMAPServer(object):
     def checkMsgs(self):
         
         self.logger.debug(u"{}: Doing checkMsgs".format(self.device.name))
-        self.connection.select("INBOX")
         typ, msg_ids = self.connection.search(None, 'ALL')
         self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
         if msg_ids == None:
@@ -187,8 +186,8 @@ class IMAPServer(object):
                         continue
                 except Exception, e:
                     self.logger.error(self.device.name + u': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
-                    pass
-
+                    continue
+                    
             try:
                 self.logger.debug(self.device.name + u": Fetching Message # " + messageNum)
                 typ, data = self.connection.fetch(messageNum, '(RFC822)')
@@ -296,17 +295,19 @@ class IMAPServer(object):
             if self.imapProps['postProcess'] == 'delete':
                 self.logger.debug(u"{}: Deleting message # {}".format(self.device.name, messageNum))
                 t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
-            elif self.imapProps['postProcess'] == 'move':
-                self.logger.debug(u"{}: Moving message # {}".format(self.device.name, messageNum))
-                result = self.connection.copy(messageNum, self.imapProps['moveFolder'])
-                if result[0] == 'OK':
-                    t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
-                else:
-                    self.logger.debug(u"{}: Error moving message # {}: {}".format(self.device.name, messageNum, result))
-                
             else:
                 # Mark the message as successfully processed
                 t, resp = self.connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
+
+                if self.imapProps['postProcess'] == 'move':
+                    self.logger.debug(u"{}: Copying message # {} to {}".format(self.device.name, messageNum, self.imapProps['moveFolder']))
+                    result = self.connection.copy(messageNum, self.imapProps['moveFolder'])
+                    if result[0] == 'OK':
+                        self.logger.debug(u"{}: Deleting message # {}".format(self.device.name, messageNum))
+                        t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
+                    else:
+                        self.logger.error(u"{}: Error moving message # {}: {}".format(self.device.name, messageNum, result))
+                
 
         self.connection.expunge()
         self.logger.debug(u"{}: checkMsgs complete".format(self.device.name))

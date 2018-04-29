@@ -13,7 +13,7 @@ from SMTPServer import SMTPServer
 from IMAPServer import IMAPServer
 from POPServer import POPServer
 
-kCurDevVersCount = 3  # current version of plugin devices
+kCurDevVersCount = 4  # current version of plugin devices
 
 ################################################################################
 class Plugin(indigo.PluginBase):
@@ -215,6 +215,11 @@ class Plugin(indigo.PluginBase):
                 if useIDLE == "unknown":
                     newProps["useIDLE"] = "True"
                     self.logger.debug(device.name + u": created useIDLE property")
+
+                postProcess = device.pluginProps.get('postProcess', "unknown")
+                if postProcess == "unknown":
+                    newProps["postProcess"] = "delete"
+                    self.logger.debug(device.name + u": created postProcess property")
 
             pollingFrequency = device.pluginProps.get('pollingFrequency', "unknown")
             if pollingFrequency == "unknown":
