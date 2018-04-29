@@ -38,13 +38,23 @@
             <Field id="postProcessingLabel" type="label" fontSize="small" fontColor="darkgray">
                 <Label>Once Better Email has processed the email message, it will be marked so that it won't be processed again.</Label>
             </Field>
-            <Field id="delete" type="checkbox" defaultValue="true">
-                <Label>Delete:</Label>
-                <Description>Delete the email message after processing.</Description>
+        	<Field id="postProcess" type="menu" defaultValue="delete">
+        		<Label>After Message is processed:</Label>
+        		<List>
+        			<Option value="none">Leave in INBOX</Option>
+        			<Option value="delete">Delete Message</Option>
+        			<Option value="move">Move Message</Option>
+        		</List>
+        	</Field>
+            <Field id="moveFolder" type="textfield" defaultValue="Trash" visibleBindingId="postProcess" visibleBindingValue="move">
+                <Label>Destination Folder Name:</Label>
             </Field>
             <Field id="checkSeen" type="checkbox" defaultValue="false">
                 <Label>Check All:</Label>
                 <Description>Process all messages every poll.  For testing purposes only.</Description>
+            </Field>
+            <Field id="blank" type="label" visibleBindingId="postProcess" visibleBindingValue="move" enabledBindingNegate="true" >
+                <Label></Label>
             </Field>
         </ConfigUI>
         <States>

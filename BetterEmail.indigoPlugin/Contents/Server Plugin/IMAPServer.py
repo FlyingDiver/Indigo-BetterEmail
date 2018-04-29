@@ -170,6 +170,7 @@ class IMAPServer(object):
     def checkMsgs(self):
         
         self.logger.debug(u"{}: Doing checkMsgs".format(self.device.name))
+        self.connection.select("INBOX")
         typ, msg_ids = self.connection.search(None, 'ALL')
         self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
         if msg_ids == None:
@@ -195,7 +196,7 @@ class IMAPServer(object):
                 message = parser.parsestr(data[0][1])
             except Exception, e:
                 self.logger.error(self.device.name + u': Error fetching Message # ' + messageNum + ": " + str(e))
-                pass
+                continue
 
             try:
                 bytes, encoding = decode_header(message.get("Subject"))[0]
@@ -291,14 +292,21 @@ class IMAPServer(object):
             broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageDate': messageDate, 'messageText': messageText}
             indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
 
-            # If configured to do so, delete the message, otherwise mark it as processed
-            if self.imapProps['delete']:
-                self.logger.debug(u"{}: Deleting message # {}".format(self.device.name,messageNum))
+            # Delete the message, move the message, or otherwise mark it as processed
+            if self.imapProps['postProcess'] == 'delete':
+                self.logger.debug(u"{}: Deleting message # {}".format(self.device.name, messageNum))
                 t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
+            elif self.imapProps['postProcess'] == 'move':
+                self.logger.debug(u"{}: Moving message # {}".format(self.device.name, messageNum))
+                result = self.connection.copy(messageNum, self.imapProps['moveFolder'])
+                if result[0] == 'OK':
+                    t, resp = self.connection.store(messageNum, '+FLAGS', r'(\Deleted)')
+                else:
+                    self.logger.debug(u"{}: Error moving message # {}: {}".format(self.device.name, messageNum, result))
+                
             else:
                 # Mark the message as successfully processed
                 t, resp = self.connection.store(messageNum, '+FLAGS', r'($IndigoProcessed)')
 
         self.connection.expunge()
         self.logger.debug(u"{}: checkMsgs complete".format(self.device.name))
-
