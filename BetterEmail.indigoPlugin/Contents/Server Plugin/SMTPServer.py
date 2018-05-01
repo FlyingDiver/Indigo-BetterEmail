@@ -20,11 +20,15 @@ from Queue import Queue
 
 import indigo
 
-def addheader(message, headername, headervalue):
+def addheader(message, headername, headervalue, encode):
     if len(headervalue) == 0:
         return message
 
-    message[headername] = Header(headervalue, 'utf-8')
+    if encode:
+        message[headername] = Header(headervalue, 'utf-8')
+    else:
+        message[headername] = Header(headervalue, 'us-ascii')
+    
     return message
 
 # SMTP specific class and methods
@@ -116,12 +120,12 @@ class SMTPServer(object):
         toAddresses = emailTo.split(",") + emailCC.split(",") + emailBCC.split(",")
         emailFrom = self.smtpProps["fromAddress"]
 
-        msg = addheader(msg, 'From', emailFrom)
-        msg = addheader(msg, 'Subject', emailSubject)
-        msg = addheader(msg, 'To', emailTo)
-        msg = addheader(msg, 'Cc', emailCC)
-        msg = addheader(msg, 'Bcc', emailBCC)
-        msg = addheader(msg, 'Date', formatdate(localtime=True))
+        msg = addheader(msg, 'From', emailFrom, True)
+        msg = addheader(msg, 'Subject', emailSubject, True)
+        msg = addheader(msg, 'To', emailTo, True)
+        msg = addheader(msg, 'Cc', emailCC, True)
+        msg = addheader(msg, 'Bcc', emailBCC, True)
+        msg = addheader(msg, 'Date', formatdate(localtime=True), False)
         
         self.logger.info(u"{}: Sending email '{}' to '{}'".format(self.device.name, emailSubject, emailTo))
 

@@ -112,31 +112,33 @@ class IMAPServer(object):
             self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
             if self.imapProps['encryptionType'] == 'SSL':
                 self.connection = imaplib2.IMAP4_SSL(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
-                self.logger.debug(self.device.name + u": Doing login()")
-                self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
-                self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
-                self.connection.select("INBOX")
 
             elif self.imapProps['encryptionType'] == 'StartTLS':
                 self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'),int(self.imapProps['hostPort']))
                 self.logger.debug(self.device.name + u": Doing starttls()")
                 self.connection.starttls()
-                self.logger.debug(self.device.name + u": Doing login()")
-                self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
-                self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
-                self.connection.select("INBOX")
 
             elif self.imapProps['encryptionType'] == 'None':
                 self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
-                self.logger.debug(self.device.name + u": Doing login()")
-                self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
-                self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
-                self.connection.select("INBOX")
 
             else:
                 self.logger.error(u"Unknown encryption type: " + self.imapProps['encryptionType'])
                 self.connection = None
+                return
+
+            self.logger.debug(self.device.name + u": Doing login()")
+            self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
+            self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
+            self.connection.select("INBOX")
+            resp, data = self.connection.list()
+            if resp == 'OK':
+                self.logger.threaddebug(u"{}: Mailbox list:".format(self.device.name))
+                for mbox in data:
+                    self.logger.threaddebug(u"{}:    Mailbox: {}".format(self.device.name, mbox))
                 
+            else:
+                self.logger.error('{}: Error getting IMAP mailbox list: '.format(self.device.name))
+                      
         except Exception, e:
             self.logger.error(self.device.name + ': Error connecting to IMAP server: ' + str(e))
             indigo.activePlugin.connErrorTriggerCheck(self.device)
