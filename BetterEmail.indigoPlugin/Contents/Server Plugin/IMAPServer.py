@@ -37,6 +37,9 @@ class IMAPServer(object):
             self.exitIDLE = False
             self.idleThread = Thread(target=self.idleIMAPThread)
             self.idleThread.start()
+        else:
+            now = time.time()
+            self.next_poll = now + float(self.imapProps.get('pollingFrequency', "15")) * 60.0
 
     def __str__(self):
         return self.status
