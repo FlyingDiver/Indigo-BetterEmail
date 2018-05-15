@@ -94,8 +94,7 @@ class IMAPServer(object):
 
         try:
             self.connectIMAP()
-            with self.connectionLock:
-                self.checkMsgs()
+            self.checkMsgs()
 
             # close the connection and log out
             self.device.updateStateOnServer(key="serverStatus", value="Success")
