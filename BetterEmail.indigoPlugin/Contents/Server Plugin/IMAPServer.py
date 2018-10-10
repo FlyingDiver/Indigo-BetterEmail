@@ -97,8 +97,6 @@ class IMAPServer(object):
             self.checkMsgs()
 
             # close the connection and log out
-            self.device.updateStateOnServer(key="serverStatus", value="Success")
-            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
             self.connection.close()
             self.connection.logout()
             self.logger.debug(u"\tLogged out from IMAP server: " + self.device.name)
@@ -132,6 +130,8 @@ class IMAPServer(object):
             self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
             self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
             self.connection.select("INBOX")
+            self.device.updateStateOnServer(key="serverStatus", value="Success")
+            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
             resp, data = self.connection.list()
             if resp == 'OK':
                 self.logger.threaddebug(u"{}: Mailbox list:".format(self.device.name))
@@ -143,6 +143,8 @@ class IMAPServer(object):
                       
         except Exception, e:
             self.logger.error(self.device.name + ': Error connecting to IMAP server: ' + str(e))
+            self.device.updateStateOnServer(key="serverStatus", value="Failure")
+            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             indigo.activePlugin.connErrorTriggerCheck(self.device)
             raise
 
@@ -185,7 +187,10 @@ class IMAPServer(object):
             if not self.imapProps['checkSeen']:         # only check for IndigoProcessed flag if we're not processing all messages
                 try:
                     typ, resp = self.connection.fetch(messageNum, '(FLAGS)')
-                    if "$IndigoProcessed" in resp[0]:
+                    self.logger.threaddebug(u"{}: Message # {} Flags = '{}'".format(self.device.name, messageNum, resp))
+                    if not resp:
+                        self.logger.debug(self.device.name + u"%s: Message # %s has no Flags.  Processing anyway." % (self.device.name, messageNum))
+                    elif "$IndigoProcessed" in resp[0]:
                         self.logger.debug(self.device.name + u"%s: Message # %s already seen, skipping..." % (self.device.name, messageNum))
                         continue
                 except Exception, e:
@@ -253,7 +258,7 @@ class IMAPServer(object):
 
             try:
                 if message.is_multipart():
-                    self.logger.threaddebug(self.device.name + 'checkMsgs: Decoding multipart message')
+                    self.logger.threaddebug(self.device.name + u": checkMsgs: Decoding multipart message")
                     for part in message.walk():
                         type = part.get_content_type()
                         self.logger.threaddebug('\tfound type: %s' % type)
@@ -287,7 +292,7 @@ class IMAPServer(object):
                         {'key':'messageText',   'value':messageText},
                         {'key':'lastMessage',   'value':messageID}
             ]
-            self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
+#            self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
             self.device.updateStatesOnServer(stateList)
             
             indigo.activePlugin.triggerCheck(self.device)
