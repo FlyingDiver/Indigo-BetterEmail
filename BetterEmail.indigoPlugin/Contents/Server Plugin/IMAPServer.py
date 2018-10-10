@@ -259,19 +259,28 @@ class IMAPServer(object):
             try:
                 if message.is_multipart():
                     self.logger.threaddebug(self.device.name + u": checkMsgs: Decoding multipart message")
+                    
+                    # look for text/plain or text/html, with text/plain preferred (break after finding plain type)
+                    
+                    use_part = None
                     for part in message.walk():
                         type = part.get_content_type()
                         self.logger.threaddebug('\tfound type: %s' % type)
                         if type == "text/plain":
+                            use_part = part
                             break
+                        elif type == "text/html":
+                            use_part = part
+                            
                     else:
-                        raise Exception("No plain text segment found in multipart message")
+                        if not use_part:
+                            raise Exception("No searchable text segment found in multipart message")
 
-                    charset = part.get_content_charset()
+                    charset = use_part.get_content_charset()
                     if charset:
-                        messageText = part.get_payload(decode=True).decode(charset)
+                        messageText = use_part.get_payload(decode=True).decode(charset)
                     else:
-                        messageText = part.get_payload()
+                        messageText = use_part.get_payload()
                 else:
                     self.logger.threaddebug('checkMsgs: Decoding simple message')
                     charset = message.get_content_charset()
