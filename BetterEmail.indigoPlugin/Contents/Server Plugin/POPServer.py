@@ -43,7 +43,7 @@ class POPServer(object):
 
     def poll(self):
         self.logger.debug(self.device.name + u": Connecting to POP Server")
-        oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages", indigo.List())
+        oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages-" + str(self.device.id), indigo.List())
         newMessageList = indigo.List()
 
         try:
@@ -175,7 +175,7 @@ class POPServer(object):
                     pass
 
             # close the connection and log out
-            indigo.activePlugin.pluginPrefs[u"readMessages"] = newMessageList
+            indigo.activePlugin.pluginPrefs[u"readMessages-" + str(self.device.id)] = newMessageList
             self.device.updateStateOnServer(key="serverStatus", value="Success")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
             connection.quit()
