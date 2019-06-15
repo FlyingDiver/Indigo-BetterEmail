@@ -42,7 +42,7 @@ class POPServer(object):
 
 
     def poll(self):
-        self.logger.debug(self.device.name + u": Connecting to POP Server")
+        self.logger.debug(u"{}: Connecting to POP Server".format(self.device.name))
         oldMessageList = indigo.activePlugin.pluginPrefs.get(u"readMessages-" + str(self.device.id), indigo.List())
         newMessageList = indigo.List()
 
@@ -54,27 +54,27 @@ class POPServer(object):
                 connection = poplib.POP3(self.popProps['address'].encode('ascii', 'ignore'),
                                          int(self.popProps['hostPort']))
             else:
-                self.logger.error(self.device.name + u": Unknown encryption type: " + self.popProps['encryptionType'])
+                self.logger.error(u"{}: Unknown encryptionType = {}".format(self.device.name, self.popProps['encryptionType']))
                 return
 
             connection.user(self.popProps['serverLogin'])
             connection.pass_(self.popProps['serverPassword'])
             (numMessages, totalSize) = connection.stat()
             if numMessages == 0:
-                self.logger.debug(self.device.name + u": No messages to process")
+                self.logger.debug(u":{} No messages to process".format(self.device.name))
 
             for i in range(numMessages):
                 messageNum = i + 1
-                self.logger.debug(self.device.name + u": Fetching Message # " + str(messageNum))
+                self.logger.debug(u"{}: Fetching Message # {}".format(self.device.name, messageNum))
                 try:
                     (server_msg, body, octets) = connection.retr(messageNum)
                     uidl = connection.uidl(messageNum).split()[2]
                     newMessageList.append(str(uidl))
                     if uidl in oldMessageList:
-                        self.logger.debug(self.device.name + u": Message " + uidl + " already seen, skipping...")
+                        self.logger.debug(u"{}: Message {} already seen, skipping...".format(self.device.name, uidl))
                         continue
 
-                    self.logger.debug(self.device.name + u": Parsing message " + uidl)
+                    self.logger.debug(u"{}: Parsing message {}".format(self.device.name, uidl))
                     parser = FeedParser()
                     for line in body:
                         parser.feed(str(line + '\n'))
@@ -86,9 +86,9 @@ class POPServer(object):
                             messageSubject = bytes.decode(encoding)
                         else:
                             messageSubject = message.get("Subject")
-                        self.logger.info(self.device.name + u": Received Message Subject: " + messageSubject)
+                        self.logger.debug(u"{}: Received Message Subject: ".format(self.device.name, messageSubject))
                     except Exception, e:
-                        self.logger.error(self.device.name + u': Error decoding "Subject:" header: %s, error: %s' % (str(message.get("Subject")), str(e)))
+                        self.logger.error(u'{}: Error decoding "Subject:" "{}", error: {}'.format(self.device.name, message.get("Subject"), e))
                         messageSubject = ""
 
                     try:
@@ -97,9 +97,9 @@ class POPServer(object):
                             messageFrom = bytes.decode(encoding)
                         else:
                             messageFrom = message.get("From")
-                        self.logger.info(u"Received Message From: " + messageFrom)
+                        self.logger.debug(u"{}: Received Message From: ".format(self.device.name, messageFrom))
                     except Exception, e:
-                        self.logger.error(self.device.name + u': Error decoding "From:" header: %s, error: %s' % (str(message.get("From")), str(e)))
+                        self.logger.error(u'{}: Error decoding "From:" "{}", error: {}'.format(self.device.name, message.get("From"), e))
                         messageFrom = ""
 
                     try:
@@ -108,9 +108,9 @@ class POPServer(object):
                             messageTo = bytes.decode(encoding)
                         else:
                             messageTo = message.get("To")
-                        self.logger.info(self.device.name + u": Received Message To: " + messageTo)
+                        self.logger.debug(u"{}: Received Message To: ".format(self.device.name, messageTo))
                     except Exception, e:
-                        self.logger.error(self.device.name + u': Error decoding "To:" header: %s, error: %s' % (str(message.get("To")), str(e)))
+                        self.logger.error(u'{}: Error decoding "To:" "{}", error: {}'.format(self.device.name, message.get("To"), e))
                         messageTo = ""
 
                     try:
@@ -119,14 +119,14 @@ class POPServer(object):
                             messageDate = bytes.decode(encoding)
                         else:
                             messageDate = message.get("Date")
-                        self.logger.info(self.device.name + u": Received Message Date: " + messageDate)
+                        self.logger.debug(u"{}: Received Message Date: ".format(self.device.name, messageDate))
                     except Exception, e:
-                        self.logger.debug(self.device.name + 'Error decoding "Date:" "%s", error: %s' % (str(message.get("Date")), str(e)))
+                        self.logger.error(u'{}: Error decoding "Date:" "{}", error: {}'.format(self.device.name, message.get("Date"), e))
                         messageDate = ""
 
                     try:
                         if message.is_multipart():
-                            self.logger.threaddebug(self.device.name + u": checkMsgs: Decoding multipart message")
+                            self.logger.threaddebug( u"{}: checkMsgs: Decoding multipart message".format(self.device.name))
                             for part in message.walk():
                                 type = part.get_content_type()
                                 self.logger.threaddebug('\tfound type: %s' % type)
@@ -148,7 +148,7 @@ class POPServer(object):
                                 messageText = message.get_payload()
 
                     except Exception, e:
-                        self.logger.error(self.device.name + u': Error decoding Body of Message # ' + messageNum + ": " + str(e))
+                        self.logger.error(u'{}: Error decoding Body of Message, error: {}'.format(self.device.name, e))
                         messageText = u""
 
                     stateList = [

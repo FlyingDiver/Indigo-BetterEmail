@@ -14,7 +14,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import Charset
 from email.header import Header
-from email.utils import formatdate
+from email.utils import formatdate, make_msgid
 
 from Queue import Queue
 
@@ -126,6 +126,7 @@ class SMTPServer(object):
         msg = addheader(msg, 'Cc', emailCC, True)
         msg = addheader(msg, 'Bcc', emailBCC, True)
         msg = addheader(msg, 'Date', formatdate(localtime=True), False)
+        msg = addheader(msg, 'Message-ID', make_msgid(), False)
         
         self.logger.info(u"{}: Sending email '{}' to '{}'".format(self.device.name, emailSubject, emailTo))
 

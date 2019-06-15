@@ -25,10 +25,10 @@ class IMAPServer(object):
         self.logger = logging.getLogger("Plugin.IMAPServer")
         self.device = device
         self.imapProps = self.device.pluginProps
-        self.logger.debug(self.device.name + u": Creating IMAP Server")
+        self.logger.debug(u"{}: Creating IMAP Server".format(self.device.name))
 
         if self.imapProps['useIDLE']:
-            self.logger.debug(self.device.name + u": Using IMAP IDLE")
+            self.logger.debug(u"{}: Using IMAP IDLE".format(self.device.name))
             self.connectionLock = Lock()
             self.idleLoopEvent = Event()
             self.lastIDLE = time.time()
@@ -81,14 +81,14 @@ class IMAPServer(object):
                 return False
 
     def poll(self):
-        self.logger.debug(self.device.name + u": Polling IMAP Server")
+        self.logger.debug(u"{}: Polling IMAP Server".format(self.device.name))
 
         if self.imapProps['useIDLE']:
             with self.connectionLock:
                 try:
                     self.checkMsgs()
                 except Exception, e:
-                    self.logger.error(u"IMAP checkMsgs error: " + str(e))
+                    self.logger.error(u"{}: IMAP checkMsgs error: {}".format(self.device.name, e))
                     
             return
 
@@ -99,17 +99,17 @@ class IMAPServer(object):
             # close the connection and log out
             self.connection.close()
             self.connection.logout()
-            self.logger.debug(u"\tLogged out from IMAP server: " + self.device.name)
+            self.logger.debug(u"{}: Logged out from IMAP server: ".format(self.device.name))
             
         except Exception, e:
-            self.logger.error(u"IMAP server connection error: " + str(e))
+            self.logger.error(u"{}: IMAP server connection error: {}".format(self.device.name, e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             
             
     def connectIMAP(self):
         try:
-            self.logger.debug(self.device.name + u": Doing connect using encryptionType = " + self.imapProps['encryptionType'])
+            self.logger.debug(u"{}: Doing connect using encryptionType = {}".format(self.device.name, self.imapProps['encryptionType']))
             if self.imapProps['encryptionType'] == 'SSL':
                 self.connection = imaplib2.IMAP4_SSL(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
 
@@ -122,13 +122,13 @@ class IMAPServer(object):
                 self.connection = imaplib2.IMAP4(self.imapProps['address'].encode('ascii', 'ignore'), int(self.imapProps['hostPort']))
 
             else:
-                self.logger.error(u"Unknown encryption type: " + self.imapProps['encryptionType'])
+                self.logger.error(u"{}: Unknown encryptionType = {}".format(self.device.name, self.imapProps['encryptionType']))
                 self.connection = None
                 return
 
-            self.logger.debug(self.device.name + u": Doing login()")
+            self.logger.debug(u"{}: Doing login()".format(self.device.name))
             self.connection.login(self.imapProps['serverLogin'], self.imapProps['serverPassword'])
-            self.logger.debug(self.device.name + u": Doing select(\"INBOX\")")
+            self.logger.debug(u"{}: Doing select()".format(self.device.name))
             self.connection.select("INBOX")
             self.device.updateStateOnServer(key="serverStatus", value="Success")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
@@ -142,7 +142,7 @@ class IMAPServer(object):
                 self.logger.error('{}: Error getting IMAP mailbox list: '.format(self.device.name))
                       
         except Exception, e:
-            self.logger.error(self.device.name + ': Error connecting to IMAP server: ' + str(e))
+            self.logger.error('{}: Error connecting to IMAP server: {}'.format(self.device.namem, e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             indigo.activePlugin.connErrorTriggerCheck(self.device)
@@ -152,10 +152,10 @@ class IMAPServer(object):
     # run IDLE loop in separate thread.  When this function exits, the IDLE thread terminates
 
     def idleIMAPThread(self):
-        self.logger.debug(self.device.name + u": idleIMAPThread() called")
+        self.logger.debug(u"{}: idleIMAPThread() called".format(self.device.name))
 
         def idleEvent(args):
-            self.logger.debug(self.device.name + u": IDLE Event Received")
+            self.logger.debug(u"{}: IDLE Event Received".format(self.device.name))
             self.lastIDLE = time.time()
             if not self.exitIDLE and not self.connectionLock.locked():
                 self.needsync = True
@@ -168,7 +168,7 @@ class IMAPServer(object):
             self.idleLoopEvent.clear()
 
             if self.exitIDLE:
-                self.logger.debug(self.device.name + u": IDLE Thread Exiting")
+                self.logger.debug(u"{}: IDLE Thread Exiting".format(self.device.name))
                 return
     
     ##########################################################################################
@@ -177,7 +177,7 @@ class IMAPServer(object):
         
         self.logger.debug(u"{}: Doing checkMsgs".format(self.device.name))
         typ, msg_ids = self.connection.search(None, 'ALL')
-        self.logger.debug(self.device.name + u": msg_ids = " + str(msg_ids))
+        self.logger.debug(u"{}: msg_ids = ".format(self.device.name, msg_ids))
         if msg_ids == None:
             self.logger.debug(u"{}: checkMsgs - No messages".format(self.device.name))
             return
@@ -189,22 +189,24 @@ class IMAPServer(object):
                     typ, resp = self.connection.fetch(messageNum, '(FLAGS)')
                     self.logger.threaddebug(u"{}: Message # {} Flags = '{}'".format(self.device.name, messageNum, resp))
                     if not resp:
-                        self.logger.debug(self.device.name + u"%s: Message # %s has no Flags.  Processing anyway." % (self.device.name, messageNum))
+                        self.logger.debug(u"{}: Message # {} has no Flags.  Processing anyway.".format(self.device.name, messageNum))
                     elif "$IndigoProcessed" in resp[0]:
-                        self.logger.debug(self.device.name + u"%s: Message # %s already seen, skipping..." % (self.device.name, messageNum))
+                        self.logger.debug(u"{}: Message # {} already seen, skipping...".format(self.device.name, messageNum))
                         continue
                 except Exception, e:
-                    self.logger.error(self.device.name + u': Error fetching FLAGS for Message # ' + messageNum + ": " + str(e))
+                    self.logger.error(u"{}: Error fetching FLAGS for Message # {}: {}".format(self.device.name, messageNum, e))
                     continue
                     
             try:
-                self.logger.debug(self.device.name + u": Fetching Message # " + messageNum)
+                self.logger.debug(u"{}: Fetching Message # {}".format(self.device.name, messageNum))
                 typ, data = self.connection.fetch(messageNum, '(RFC822)')
                 parser = Parser()
                 message = parser.parsestr(data[0][1])
             except Exception, e:
-                self.logger.error(self.device.name + u': Error fetching Message # ' + messageNum + ": " + str(e))
+                self.logger.error(u"{}: Error fetching Message # {}: {}".format(self.device.name, messageNum, e))
                 continue
+
+            self.logger.threaddebug(u"{}: Message #{}:\n{}".format(self.device.name, messageNum, message))
 
             try:
                 bytes, encoding = decode_header(message.get("Subject"))[0]
@@ -212,9 +214,9 @@ class IMAPServer(object):
                     messageSubject = bytes.decode(encoding)
                 else:
                     messageSubject = message.get("Subject")
-                self.logger.info(self.device.name + u": Received Message Subject: " + messageSubject)
+                self.logger.debug(u"{}: Received Message Subject: ".format(self.device.name, messageSubject))
             except Exception, e:
-                self.logger.debug(self.device.name + u': Error decoding "Subject:" "%s", error: %s' % (str(message.get("Subject")), str(e)))
+                self.logger.error(u'{}: Error decoding "Subject:" "{}", error: {}'.format(self.device.name, message.get("Subject"), e))
                 messageSubject = ""
 
             try:
@@ -223,9 +225,9 @@ class IMAPServer(object):
                     messageFrom = bytes.decode(encoding)
                 else:
                     messageFrom = message.get("From")
-                self.logger.info(self.device.name + u": Received Message From: " + messageFrom)
+                self.logger.debug(u"{}: Received Message From: ".format(self.device.name, messageFrom))
             except Exception, e:
-                self.logger.debug(self.device.name + u': Error decoding "From:" "%s", error: %s' % (str(message.get("From")), str(e)))
+                self.logger.error(u'{}: Error decoding "From:" "{}", error: {}'.format(self.device.name, message.get("From"), e))
                 messageFrom = ""
 
             try:
@@ -234,9 +236,9 @@ class IMAPServer(object):
                     messageTo = bytes.decode(encoding)
                 else:
                     messageTo = message.get("To")
-                self.logger.info(self.device.name + u": Received Message To: " + messageTo)
+                self.logger.debug(u"{}: Received Message To: ".format(self.device.name, messageTo))
             except Exception, e:
-                self.logger.debug(self.device.name + u': Error decoding "To:" "%s", error: %s' % (str(message.get("To")), str(e)))
+                self.logger.error(u'{}: Error decoding "To:" "{}", error: {}'.format(self.device.name, message.get("To"), e))
                 messageTo = ""
 
             try:
@@ -245,20 +247,20 @@ class IMAPServer(object):
                     messageDate = bytes.decode(encoding)
                 else:
                     messageDate = message.get("Date")
-                self.logger.info(self.device.name + u": Received Message Date: " + messageDate)
+                self.logger.debug(u"{}: Received Message Date: ".format(self.device.name, messageDate))
             except Exception, e:
-                self.logger.debug(self.device.name + u': Error decoding "Date:" "%s", error: %s' % (str(message.get("Date")), str(e)))
+                self.logger.error(u'{}: Error decoding "Date:" "{}", error: {}'.format(self.device.name, message.get("Date"), e))
                 messageDate = ""
 
             try:
                 messageID = message.get("Message-Id")
-                self.logger.debug(self.device.name + u": Received Message ID: " + messageID)
+                self.logger.debug(u"{}: Received Message ID: ".format(self.device.name, messageID))
             except Exception, e:
                 messageID = ""
 
             try:
                 if message.is_multipart():
-                    self.logger.threaddebug(self.device.name + u": checkMsgs: Decoding multipart message")
+                    self.logger.threaddebug( u"{}: checkMsgs: Decoding multipart message".format(self.device.name))
                     
                     # look for text/plain or text/html, with text/plain preferred (break after finding plain type)
                     
@@ -282,7 +284,7 @@ class IMAPServer(object):
                     else:
                         messageText = use_part.get_payload()
                 else:
-                    self.logger.threaddebug('checkMsgs: Decoding simple message')
+                    self.logger.threaddebug( u"{}: checkMsgs: Decoding simple message".format(self.device.name))
                     charset = message.get_content_charset()
                     if charset:
                         messageText = message.get_payload(decode=True).decode(charset)
@@ -290,7 +292,7 @@ class IMAPServer(object):
                         messageText = message.get_payload()
 
             except Exception, e:
-                self.logger.error('Error decoding Body of Message # ' + messageNum + ": " + str(e))
+                self.logger.error(u'{}: Error decoding Body of Message, error: {}'.format(self.device.name, e))
                 messageText = u""
 
             stateList = [
@@ -301,7 +303,6 @@ class IMAPServer(object):
                         {'key':'messageText',   'value':messageText},
                         {'key':'lastMessage',   'value':messageID}
             ]
-#            self.logger.threaddebug('checkMsgs: Updating states on server: %s' % str(stateList))
             self.device.updateStatesOnServer(stateList)
             
             indigo.activePlugin.triggerCheck(self.device)
