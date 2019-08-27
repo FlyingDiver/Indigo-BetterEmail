@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ####################
-# Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
 import time
 import ssl
@@ -45,7 +44,7 @@ class SMTPServer(object):
         return self.status
 
     def shutDown(self):
-        self.logger.debug(self.device.name + u": shutting down")
+        self.logger.debug(u"{}: shutting down".format(self.device.name))
 
     def pollCheck(self):
         pollingFrequency = int(self.smtpProps.get('pollingFrequency', "15"))
@@ -61,7 +60,7 @@ class SMTPServer(object):
 
 
     def poll(self):
-        self.logger.debug(self.device.name + u": SMTP poll, " + str(self.smtpQ.qsize()) + u" items in queue")
+        self.logger.debug(u"{}: SMTP poll, {} items in queue".format(self.device.name, self.smtpQ.qsize()))
         while not self.smtpQ.empty():
             action = self.smtpQ.get(False)
             if not self.smtpSend(action):
@@ -82,19 +81,19 @@ class SMTPServer(object):
         if "emailTo" in pluginAction.props:
             emailTo = indigo.activePlugin.substitute(pluginAction.props["emailTo"])
         else:
-            self.logger.error(self.device.name + u": No emailTo property in plugin property dict")
+            self.logger.error(u"{}: No emailTo property in plugin property dict".format(self.device.name))
             return
 
         if "emailSubject" in pluginAction.props:
             emailSubject = indigo.activePlugin.substitute(pluginAction.props["emailSubject"])
         else:
-            self.logger.error(self.device.name + u": No emailSubject property in plugin property dict")
+            self.logger.error(u"{}: No emailSubject property in plugin property dict".format(self.device.name))
             return
 
         if "emailMessage" in pluginAction.props:
             emailMessage = indigo.activePlugin.substitute(pluginAction.props["emailMessage"])
         else:
-            self.logger.error(self.device.name + u": No emailMessage property in plugin property dict")
+            self.logger.error(u"{}: No emailMessage property in plugin property dict".format(self.device.name))
             return
 
         emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
@@ -160,7 +159,7 @@ class SMTPServer(object):
                 return False
 
         except Exception, e:
-            self.logger.error(self.device.name + u": SMTP server connection error: " + str(e))
+            self.logger.error(u"{}: SMTP server connection error: {}".format(self.device.name, e))
             smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
             smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             indigo.activePlugin.connErrorTriggerCheck(self.device)

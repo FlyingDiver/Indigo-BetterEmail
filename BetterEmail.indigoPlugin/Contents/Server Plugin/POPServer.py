@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ####################
-# Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
 import time
 import ssl
@@ -30,7 +29,7 @@ class POPServer(object):
         return self.status
 
     def shutDown(self):
-        self.logger.debug(self.device.name + u": shutting down")
+        self.logger.debug(u"{}: shutting down".format(self.device.name))
 
     def pollCheck(self):
         now = time.time()
@@ -159,7 +158,7 @@ class POPServer(object):
                                 {'key':'messageText',   'value':messageText},
                                 {'key':'lastMessage',   'value':uidl}
                     ]
-                    self.logger.threaddebug(self.device.name + u': checkMsgs: Updating states on server: %s' % str(stateList))
+                    self.logger.threaddebug(u"{}: checkMsgs: Updating states on server: {}".format(self.device.name, str(stateList))
                     self.device.updateStatesOnServer(stateList)
                     broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageDate': messageDate, 'messageText': messageText}
                     indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
@@ -167,11 +166,11 @@ class POPServer(object):
 
                     # If configured to do so, delete the message, otherwise mark it as processed
                     if self.popProps['delete']:
-                        self.logger.debug(self.device.name + u": Deleting Message # " + str(messageNum))
+                        self.logger.debug(u"{}: Deleting Message {}".format(self.device.name, messageNum))
                         connection.dele(messageNum)
 
                 except Exception, e:
-                    self.logger.error(self.device.name + u': Error fetching Message ' + str(messageNum) + ": " + str(e))
+                    self.logger.error(u"{}: Error fetching Message {}: {}".format(self.device.name, messageNum, e))
                     pass
 
             # close the connection and log out
@@ -182,7 +181,7 @@ class POPServer(object):
             self.logger.debug(self.device.name + u": Logged out from POP server")
 
         except Exception, e:
-            self.logger.error(self.device.name + u": POP server connection error: " + str(e))
+            self.logger.error(u"{}: POP server connection error: {}".format(self.device.name, e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             indigo.activePlugin.connErrorTriggerCheck(self.device)

@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ####################
-# Copyright (c) 2015-2016, Joe Keenan, joe@flyingdiver.com
 
 import ssl
 import time
@@ -45,16 +44,16 @@ class IMAPServer(object):
         return self.status
 
     def shutDown(self):
-        self.logger.debug(self.device.name + u": shutting down")
+        self.logger.debug(u"{}: shutting down".format(self.device.name))
         if self.imapProps['useIDLE']:
             try:
-                self.logger.debug(self.device.name + u": Stopping IDLE connection")
+                self.logger.debug(u"{}: Stopping IDLE connection".format(self.device.name))
                 self.exitIDLE = True
                 self.idleLoopEvent.set()
                 self.connection.close()
                 self.connection.logout()
             except Exception, e:
-                self.logger.error(self.device.name + u": IMAP IDLE server shutdown error: " + str(e))
+                self.logger.error(u"{}: IMAP IDLE server shutdown error: {}".format(self.device.name, e))
                 indigo.activePlugin.connErrorTriggerCheck(self.device)
             
     def pollCheck(self):
@@ -62,7 +61,7 @@ class IMAPServer(object):
         if self.imapProps['useIDLE']:
 
             if time.time() > (self.lastIDLE + 3600.0):      # if we go an hour without an IDLE event, reconnect
-                self.logger.warning(self.device.name + u": IDLE Event Timeout, reconnecting")                
+                self.logger.warning(u"{}: IDLE Event Timeout, reconnecting".format(self.device.name))                
                 indigo.activePlugin.restartQueue.put(self.device.id)
                                                 
             if self.needsync:
@@ -142,7 +141,7 @@ class IMAPServer(object):
                 self.logger.error('{}: Error getting IMAP mailbox list: '.format(self.device.name))
                       
         except Exception, e:
-            self.logger.error('{}: Error connecting to IMAP server: {}'.format(self.device.namem, e))
+            self.logger.error('{}: Error connecting to IMAP server: {}'.format(self.device.name, e))
             self.device.updateStateOnServer(key="serverStatus", value="Failure")
             self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             indigo.activePlugin.connErrorTriggerCheck(self.device)
