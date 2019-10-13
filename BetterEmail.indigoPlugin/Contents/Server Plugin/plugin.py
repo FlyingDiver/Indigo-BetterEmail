@@ -326,7 +326,7 @@ class Plugin(indigo.PluginBase):
     # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
     ######################
     def sendEmailAction(self, pluginAction, smtpDevice, callerWaitingForResult):
-        self.logger.debug(u"sendEmailAction queueing message '{}'".format(indigo.activePlugin.substitute(pluginAction.props["emailSubject"]))
+        self.logger.debug(u"sendEmailAction queueing message '{}'".format(indigo.activePlugin.substitute(pluginAction.props["emailSubject"])))
         smtpServer = self.serverDict[smtpDevice.id]
         smtpServer.smtpQ.put(pluginAction)
         smtpServer.poll()

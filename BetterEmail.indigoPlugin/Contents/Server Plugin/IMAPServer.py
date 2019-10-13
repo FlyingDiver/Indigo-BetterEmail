@@ -37,8 +37,7 @@ class IMAPServer(object):
             self.idleThread = Thread(target=self.idleIMAPThread)
             self.idleThread.start()
         else:
-            now = time.time()
-            self.next_poll = now + float(self.imapProps.get('pollingFrequency', "15")) * 60.0
+            self.next_poll = time.time() + float(self.imapProps.get('pollingFrequency', "15")) * 60.0
 
     def __str__(self):
         return self.status
@@ -72,9 +71,8 @@ class IMAPServer(object):
         
         # not IDLE, do normal poll check
         else:              
-            now = time.time()
-            if now > self.next_poll:
-                self.next_poll = now + float(self.imapProps.get('pollingFrequency', "15")) * 60.0
+            if time.time() > self.next_poll:
+                self.next_poll = time.time() + float(self.imapProps.get('pollingFrequency', "15")) * 60.0
                 return True
             else:
                 return False
@@ -176,8 +174,8 @@ class IMAPServer(object):
         
         self.logger.debug(u"{}: Doing checkMsgs".format(self.device.name))
         typ, msg_ids = self.connection.search(None, 'ALL')
-        self.logger.debug(u"{}: msg_ids = ".format(self.device.name, msg_ids))
-        if msg_ids == None:
+        self.logger.debug(u"{}: checkMsgs - typ = {}, msg_ids = {}".format(self.device.name, typ, msg_ids))
+        if msg_ids == None or msg_ids[0] == None or msg_ids[0] == '':
             self.logger.debug(u"{}: checkMsgs - No messages".format(self.device.name))
             return
             

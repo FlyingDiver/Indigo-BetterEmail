@@ -158,7 +158,7 @@ class POPServer(object):
                                 {'key':'messageText',   'value':messageText},
                                 {'key':'lastMessage',   'value':uidl}
                     ]
-                    self.logger.threaddebug(u"{}: checkMsgs: Updating states on server: {}".format(self.device.name, str(stateList))
+                    self.logger.threaddebug(u"{}: checkMsgs: Updating states on server: {}".format(self.device.name, str(stateList)))
                     self.device.updateStatesOnServer(stateList)
                     broadcastDict = {'messageFrom': messageFrom, 'messageTo': messageTo, 'messageSubject': messageSubject, 'messageDate': messageDate, 'messageText': messageText}
                     indigo.server.broadcastToSubscribers(u"messageReceived", broadcastDict)
