@@ -196,7 +196,7 @@ class IMAPServer(object):
                     
             try:
                 self.logger.debug(u"{}: Fetching Message # {}".format(self.device.name, messageNum))
-                typ, data = self.connection.fetch(messageNum, '(RFC822)')
+                typ, data = self.connection.fetch(messageNum, '(RFC822 BODY[])')
                 parser = Parser()
                 message = parser.parsestr(data[0][1])
             except Exception, e:
@@ -211,7 +211,7 @@ class IMAPServer(object):
                     messageSubject = bytes.decode(encoding)
                 else:
                     messageSubject = message.get("Subject")
-                self.logger.debug(u"{}: Received Message Subject: ".format(self.device.name, messageSubject))
+                self.logger.debug(u"{}: Received Message Subject: {}".format(self.device.name, messageSubject))
             except Exception, e:
                 self.logger.error(u'{}: Error decoding "Subject:" "{}", error: {}'.format(self.device.name, message.get("Subject"), e))
                 messageSubject = ""
@@ -222,7 +222,7 @@ class IMAPServer(object):
                     messageFrom = bytes.decode(encoding)
                 else:
                     messageFrom = message.get("From")
-                self.logger.debug(u"{}: Received Message From: ".format(self.device.name, messageFrom))
+                self.logger.debug(u"{}: Received Message From: {}".format(self.device.name, messageFrom))
             except Exception, e:
                 self.logger.error(u'{}: Error decoding "From:" "{}", error: {}'.format(self.device.name, message.get("From"), e))
                 messageFrom = ""
@@ -233,7 +233,7 @@ class IMAPServer(object):
                     messageTo = bytes.decode(encoding)
                 else:
                     messageTo = message.get("To")
-                self.logger.debug(u"{}: Received Message To: ".format(self.device.name, messageTo))
+                self.logger.debug(u"{}: Received Message To: {}".format(self.device.name, messageTo))
             except Exception, e:
                 self.logger.error(u'{}: Error decoding "To:" "{}", error: {}'.format(self.device.name, message.get("To"), e))
                 messageTo = ""
@@ -244,14 +244,14 @@ class IMAPServer(object):
                     messageDate = bytes.decode(encoding)
                 else:
                     messageDate = message.get("Date")
-                self.logger.debug(u"{}: Received Message Date: ".format(self.device.name, messageDate))
+                self.logger.debug(u"{}: Received Message Date: {}".format(self.device.name, messageDate))
             except Exception, e:
                 self.logger.error(u'{}: Error decoding "Date:" "{}", error: {}'.format(self.device.name, message.get("Date"), e))
                 messageDate = ""
 
             try:
                 messageID = message.get("Message-Id")
-                self.logger.debug(u"{}: Received Message ID: ".format(self.device.name, messageID))
+                self.logger.debug(u"{}: Received Message ID: {}".format(self.device.name, messageID))
             except Exception, e:
                 messageID = ""
 
