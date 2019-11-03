@@ -199,11 +199,10 @@ class IMAPServer(object):
                 typ, data = self.connection.fetch(messageNum, '(RFC822 BODY[])')
                 parser = Parser()
                 message = parser.parsestr(data[0][1])
+                self.logger.debug(u"{}: Fetching Message # {} Complete".format(self.device.name, messageNum))
             except Exception, e:
                 self.logger.error(u"{}: Error fetching Message # {}: {}".format(self.device.name, messageNum, e))
                 continue
-
-            self.logger.threaddebug(u"{}: Message #{}:\n{}".format(self.device.name, messageNum, message))
 
             try:
                 bytes, encoding = decode_header(message.get("Subject"))[0]
