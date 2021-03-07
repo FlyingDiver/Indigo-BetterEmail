@@ -60,7 +60,7 @@ class POPServer(object):
             connection.pass_(self.popProps['serverPassword'])
             (numMessages, totalSize) = connection.stat()
             if numMessages == 0:
-                self.logger.debug(u":{} No messages to process".format(self.device.name))
+                self.logger.debug(u"{}: No messages to process".format(self.device.name))
 
             for i in range(numMessages):
                 messageNum = i + 1

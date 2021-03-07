@@ -328,7 +328,15 @@ class Plugin(indigo.PluginBase):
     def sendEmailAction(self, pluginAction, smtpDevice, callerWaitingForResult):
         self.logger.debug(u"sendEmailAction queueing message '{}'".format(indigo.activePlugin.substitute(pluginAction.props["emailSubject"])))
         smtpServer = self.serverDict[smtpDevice.id]
-        smtpServer.smtpQ.put(pluginAction)
+        smtpServer.smtpQ.put(pluginAction.props)
+        smtpServer.poll()
+
+    def sendLogEmailAction(self, pluginAction, smtpDevice, callerWaitingForResult):
+        self.logger.debug(u"sendEmailAction queueing log message '{}'".format(indigo.activePlugin.substitute(pluginAction.props["emailSubject"])))
+        propsDict = pluginAction.props
+        propsDict['emailMessage'] = indigo.server.getEventLogList(lineCount=int(propsDict.get('logLines', '100')), showTimeStamp=False, returnAsList=False)
+        smtpServer = self.serverDict[smtpDevice.id]
+        smtpServer.smtpQ.put(propsDict)
         smtpServer.poll()
 
     ########################################
