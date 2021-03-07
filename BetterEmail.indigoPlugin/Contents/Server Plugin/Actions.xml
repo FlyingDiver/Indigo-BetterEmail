@@ -59,6 +59,32 @@
             </Field>
         </ConfigUI>
     </Action>
+    <Action id="sendLogEmail" deviceFilter="self.smtpAccount">
+        <Name>Send Indigo Log Email</Name>
+        <CallbackMethod>sendLogEmailAction</CallbackMethod>
+        <ConfigUI>
+            <Field id="emailTo" type="textfield">
+                <Label>Email To:</Label>
+            </Field>
+            <Field id="emailCC" type="textfield">
+                <Label>Email CC:</Label>
+            </Field>
+            <Field id="emailBCC" type="textfield">
+                <Label>Email BCC:</Label>
+            </Field>
+            <Field id="simpleSeparator1" type="separator"/>
+            <Field id="emailSubject" type="textfield">
+                <Label>Subject:</Label>
+            </Field>
+            <Field id="logLines" type="textfield" defaultValue = "100">
+                <Label>Lines to send:</Label>
+            </Field>
+            <Field id="simpleSeparator2" type="separator"/>
+            <Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Variable and Device State Substitution is enabled for all fields. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+            </Field>
+        </ConfigUI>
+    </Action>
     <Action id="pollAllServers">
         <Name>Poll All Servers</Name>
         <CallbackMethod>pollAllServers</CallbackMethod>

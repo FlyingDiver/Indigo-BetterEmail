@@ -62,46 +62,44 @@ class SMTPServer(object):
     def poll(self):
         self.logger.debug(u"{}: SMTP poll, {} items in queue".format(self.device.name, self.smtpQ.qsize()))
         while not self.smtpQ.empty():
-            action = self.smtpQ.get(False)
-            if not self.smtpSend(action):
-                self.smtpQ.put(action)  # put back in queue if sending fails
+            propsDict = self.smtpQ.get(False)
+            if not self.smtpSend(propsDict):
+                self.smtpQ.put(propsDict)  # put back in queue if sending fails
                 return
 
     def clearQueue(self):
         self.smtpQ = Queue()  # just nuke the old queue and replace it
 
-    def smtpSend(self, pluginAction):
+    def smtpSend(self, propsDict):
 
         # Override python's weird assumption that utf-8 text should be encoded with
         # base64, and instead use quoted-printable.
         Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
 
-        smtpDevice = indigo.devices[pluginAction.deviceId]
-
-        if "emailTo" in pluginAction.props:
-            emailTo = indigo.activePlugin.substitute(pluginAction.props["emailTo"])
+        if "emailTo" in propsDict:
+            emailTo = indigo.activePlugin.substitute(propsDict["emailTo"])
         else:
             self.logger.error(u"{}: No emailTo property in plugin property dict".format(self.device.name))
             return
 
-        if "emailSubject" in pluginAction.props:
-            emailSubject = indigo.activePlugin.substitute(pluginAction.props["emailSubject"])
+        if "emailSubject" in propsDict:
+            emailSubject = indigo.activePlugin.substitute(propsDict["emailSubject"])
         else:
             self.logger.error(u"{}: No emailSubject property in plugin property dict".format(self.device.name))
             return
 
-        if "emailMessage" in pluginAction.props:
-            emailMessage = indigo.activePlugin.substitute(pluginAction.props["emailMessage"])
+        if "emailMessage" in propsDict:
+            emailMessage = indigo.activePlugin.substitute(propsDict["emailMessage"])
         else:
             self.logger.error(u"{}: No emailMessage property in plugin property dict".format(self.device.name))
             return
 
-        emailCC = indigo.activePlugin.substitute(pluginAction.props.get("emailCC", ""))
-        emailBCC = indigo.activePlugin.substitute(pluginAction.props.get("emailBCC", ""))
+        emailCC = indigo.activePlugin.substitute(propsDict.get("emailCC", ""))
+        emailBCC = indigo.activePlugin.substitute(propsDict.get("emailBCC", ""))
         
-        emailFormat = pluginAction.props.get("emailFormat", "plain")
+        emailFormat = propsDict.get("emailFormat", "plain")
 
-        attach = pluginAction.props.get("emailAttachments", "")
+        attach = propsDict.get("emailAttachments", "")
         if len(attach) == 0:
             msg = MIMEText(emailMessage, emailFormat, 'utf-8')
         else:
@@ -160,15 +158,15 @@ class SMTPServer(object):
 
         except Exception, e:
             self.logger.error(u"{}: SMTP server connection error: {}".format(self.device.name, e))
-            smtpDevice.updateStateOnServer(key="serverStatus", value="Failure")
-            smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+            self.device.updateStateOnServer(key="serverStatus", value="Failure")
+            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             indigo.activePlugin.connErrorTriggerCheck(self.device)
             return False
 
         else:
 
-            smtpDevice.updateStateOnServer(key="serverStatus", value="Success")
-            smtpDevice.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+            self.device.updateStateOnServer(key="serverStatus", value="Success")
+            self.device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 
             broadcastDict = {'messageFrom': emailFrom, 'messageTo': toAddresses, 'messageSubject': emailSubject, 'messageText': emailMessage}
             indigo.server.broadcastToSubscribers(u"messageSent", broadcastDict)
