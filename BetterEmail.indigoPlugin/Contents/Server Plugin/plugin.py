@@ -116,18 +116,22 @@ class Plugin(indigo.PluginBase):
             if (trigger.pluginProps["serverID"] == str(device.id)) or (trigger.pluginProps["serverID"] == "-1"):
 
                 if trigger.pluginTypeId == "regexMatch":
-                    field = trigger.pluginProps["fieldPopUp"]
-                    pattern = trigger.pluginProps["regexPattern"]
-                    self.logger.debug("\t\tChecking Device State {} for Pattern: {}".format(field, pattern))
-                    cPattern = re.compile(pattern)
-                    match = cPattern.search(device.states[field])
-                    if match:
-                        regexMatch = match.group()
-                        self.logger.debug("\t\tExecuting Trigger {} ({}), match: {}".format(trigger.name, trigger.id, regexMatch))
-                        device.updateStateOnServer(key="regexMatch", value=regexMatch)
-                        indigo.trigger.execute(trigger)
-                    else:
-                        self.logger.debug("\t\tNo Match for Trigger {} ({})".format(trigger.name, trigger.id))
+                    try:
+                        field = trigger.pluginProps["fieldPopUp"]
+                        pattern = trigger.pluginProps["regexPattern"]
+                        self.logger.debug("\t\tChecking Device State {} for Pattern: {}".format(field, pattern))
+                        cPattern = re.compile(pattern)
+                        match = cPattern.search(device.states[field])
+                        if match:
+                            regexMatch = match.group()
+                            self.logger.debug("\t\tExecuting Trigger {} ({}), match: {}".format(trigger.name, trigger.id, regexMatch))
+                            device.updateStateOnServer(key="regexMatch", value=regexMatch)
+                            indigo.trigger.execute(trigger)
+                        else:
+                            self.logger.debug("\t\tNo Match for Trigger {} ({})".format(trigger.name, trigger.id))
+                    except Exception as err:
+                        self.logger.warning(u"{}: RegEx processing error for '{}':  {}".format(trigger.name, pattern, err))
+                        
                         
                 elif trigger.pluginTypeId == "stringMatch":
                     field = trigger.pluginProps["fieldPopUp"]
